@@ -1,731 +1,799 @@
-# app.py
-from flask import Flask, render_template, request, redirect, url_for, jsonify, session, flash, g
-import json
 import os
-import secrets # For generating SECRET_KEY
+import secrets
+import smtplib
+import pandas as pd
+import time
 from datetime import datetime
-import pytz # For timezone handling
-import requests # For Google Apps Script integration
-import csv # For reading CSV for dashboard (locally) - Note: not actively used for dashboard now, mostly GS
-from dotenv import load_dotenv # For loading environment variables from .env locally
-from flask_moment import Moment # For displaying human-readable times in templates
-from functools import wraps # For decorators
-from werkzeug.security import generate_password_hash, check_password_hash # For password hashing
-import time # For retries
+from functools import wraps
+from email.mime.text import MIMEText
 
-# --- Configuration ---
-load_dotenv() # Load environment variables from .env file
+from flask import (
+    Flask, render_template, request, redirect, url_for,
+    flash, session, g
+)
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+from flask_moment import Moment
+from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
+import pytz
+from flask import request, redirect, url_for, flash
+from flask_login import login_required, LoginManager, current_user, login_user
+from flask_login import login_user
+from flask_wtf import CSRFProtect
+from flask_login import UserMixin
+from flask_wtf import FlaskForm
+from wtforms import StringField, EmailField
+from wtforms.validators import InputRequired, Email
+from flask_wtf.csrf import generate_csrf
+from flask import request, jsonify
+from dotenv import load_dotenv
+load_dotenv()
 
+smtp_user = os.getenv("SMTP_USER")
+smtp_pass = os.getenv("SMTP_PASSWORD")
+
+# -------------------------
+# Flask Setup
+# -------------------------
 app = Flask(__name__)
-app.secret_key = os.getenv('FLASK_SECRET_KEY', secrets.token_hex(16))
-if app.secret_key == secrets.token_hex(16):
-    print("WARNING: FLASK_SECRET_KEY environment variable not set. Using a temporary random key. Set a persistent FLASK_SECRET_KEY for production!")
+app.secret_key = os.getenv("FLASK_SECRET_KEY", secrets.token_hex(16))
 
+# DB Setup
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
+    'DATABASE_URL', 'postgresql://postgres:admin1234@localhost/attendance_app'
+)
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+
+@login_manager.user_loader
+def load_user(user_id):
+    return db.session.get(User, int(user_id))  
+login_manager.login_view = 'login'  # Redirects to login page if not logged in
+
+db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 moment = Moment(app)
 
-# Define Ghana timezone
+csrf = CSRFProtect()
+csrf.init_app(app)
+
+# -------------------------
+# Config
+# -------------------------
+UPLOAD_FOLDER = 'static/uploads/logos'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+ALLOWED_LOGO_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 GHANA_TIMEZONE = pytz.timezone('Africa/Accra')
 
-# --- New: Define a higher default timeout for Google Sheets requests ---
-GOOGLE_SHEETS_REQUEST_TIMEOUT = 15 # Increased from 5 to 15 seconds
-MAX_RETRIES = 3
-RETRY_DELAY = 1 # seconds
 
+# -------------------------
+# Models
+# -------------------------
+class Organisation(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), nullable=False, unique=True)
+    email = db.Column(db.String(255), nullable=False, unique=True)
+    logo_filename = db.Column(db.String(255))
+    secret_code = db.Column(db.String(10), nullable=False, unique=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    users = db.relationship('User', backref='organisation', lazy=True)
+    departments = db.relationship('Department', backref='organisation', lazy=True)
+
+
+class Department(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), nullable=False)
+    organisation_id = db.Column(db.Integer, db.ForeignKey('organisation.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class User(UserMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
+    role = db.Column(db.String(50), default='solo_lecturer')  # org_admin, school_lecturer, solo_lecturer
+    logo_filename = db.Column(db.String(255))
+    organisation_id = db.Column(db.Integer, db.ForeignKey('organisation.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    name = db.Column(db.String(100))  # <- Add this line if not present
+    
+class Student(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.String(50), unique=True, nullable=False)
+    index_number = db.Column(db.String(50), unique=True, nullable=False)
+    full_name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(100), unique=True, nullable=False)
+    phone = db.Column(db.String(20))  # ✅ New phone field
+    profile_pic = db.Column(db.String(255))  # ✅ Path or filename for profile picture
+    level = db.Column(db.String(20))  # ✅ New level field
+    
+    college = db.Column(db.String(100))
+    faculty = db.Column(db.String(100))
+    department = db.Column(db.String(100))
+
+    organisation_id = db.Column(db.Integer, db.ForeignKey('organisation.id'), nullable=False)
+    organisation = db.relationship('Organisation', backref=db.backref('students', lazy=True))
+
+
+
+
+class SessionModel(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.String(100), unique=True, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    latitude = db.Column(db.Float)
+    longitude = db.Column(db.Float)
+    radius = db.Column(db.Integer)
+    status = db.Column(db.String(20), default='active')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class Attendance(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.String(100), nullable=False)
+    student_id = db.Column(db.String(100), nullable=False)
+    student_name = db.Column(db.String(255))
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    status = db.Column(db.String(50))
+    device_key = db.Column(db.String(255))
+    
+
+class Lecturer(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    full_name = db.Column(db.String(255), nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    phone = db.Column(db.String(20))
+    college = db.Column(db.String(100))
+    faculty = db.Column(db.String(100))
+    department = db.Column(db.String(100))
+    
+class LecturerForm(FlaskForm):
+    full_name = StringField('Full Name', validators=[InputRequired()])
+    email = EmailField('Email', validators=[InputRequired(), Email()])
+    phone = StringField('Phone')
+    college = StringField('College', validators=[InputRequired()])
+    faculty = StringField('Faculty', validators=[InputRequired()])
+    department = StringField('Department', validators=[InputRequired()])
+    
+class Course(db.Model):
+    __tablename__ = 'courses'  # match the table you created in SQL
+    __table_args__ = {'extend_existing': True}  # prevent redefinition error
+
+    id = db.Column(db.Integer, primary_key=True)
+    org_id = db.Column(db.Integer, db.ForeignKey('organisation.id', ondelete="CASCADE"), nullable=False)
+    course_name = db.Column(db.String(255), nullable=False)
+    course_code = db.Column(db.String(50), nullable=False)
+    level = db.Column(db.String(50), nullable=False)
+    department = db.Column(db.String(255), nullable=False)
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
+
+
+
+
+
+# -------------------------
+# Helpers
+# -------------------------
 def get_ghana_time():
-    """Returns the current datetime in Ghana's timezone."""
     return datetime.now(GHANA_TIMEZONE)
+
+@app.context_processor
+def inject_globals():
+    return dict(get_ghana_time=get_ghana_time)
+
+
+
+def allowed_logo(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_LOGO_EXTENSIONS
+
+
+def send_secret_code(email, org_name, secret_code):
+    """Send secret code to the organisation email with a nice HTML template."""
+    try:
+        smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
+        smtp_port = int(os.getenv("SMTP_PORT", 587))
+        smtp_user = os.getenv("SMTP_USER", "your_email@gmail.com")
+        smtp_password = os.getenv("SMTP_PASSWORD", "your_password")
+
+        html_content = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; background-color: #f8f9fa; padding: 20px;">
+            <div style="max-width: 500px; margin:auto; background: white; border-radius: 10px; padding: 30px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                <img src="https://i.postimg.cc/SsdcCdbG/Locify-email.png" alt="Locify Logo" width="80" style="margin-bottom: 20px;">
+                <h2 style="color:#007bff;">Welcome to Locify - Presence Made Simple. </h2>
+                <p>Hello <strong>{org_name}</strong>,</p>
+                <p>Thank you for registering your organisation with our Attendance System.</p>
+                <p style="font-size: 18px; margin-top:20px;">Here is your <strong>Unique Organisation Code</strong>:</p>
+                <div style="font-size: 24px; font-weight: bold; color: #28a745; margin:20px 0;">{secret_code}</div>
+                <p>Share this code with your lecturers to let them register under your organisation.</p>
+                <hr style="margin: 30px 0;">
+                <p style="font-size: 12px; color: #888;">&copy; 2025 Locify | All Rights Reserved</p>
+            </div>
+        </body>
+        </html>
+        """
+
+        msg = MIMEText(html_content, "html")
+        msg['Subject'] = "Your Organisation Secret Code"
+        msg['From'] = smtp_user
+        msg['To'] = email
+
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_user, smtp_password)
+            time.sleep(2)
+            server.send_message(msg)
+
+        print(f"✅ Secret code email sent to {email}")
+
+    except Exception as e:
+        print(f"❌ Error sending email: {e}")
+
+
+def role_required(*roles):
+    """Decorator to restrict access to certain roles"""
+    def wrapper(f):
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            if not session.get('logged_in') or session.get('role') not in roles:
+                flash("Access denied for your role.", "danger")
+                return redirect(url_for('index'))
+            return f(*args, **kwargs)
+        return decorated
+    return wrapper
+
 
 @app.before_request
 def before_request():
-    """Sets the current Ghana time in the global 'g' object for template access."""
     g.current_time = get_ghana_time()
 
-# In-memory attendance records (primarily for local debugging, ephemeral on Render)
-in_memory_attendance_records = []
 
-# Google Apps Script Web App URL from environment variables
-GOOGLE_SHEET_WEB_APP_URL = os.getenv('GOOGLE_SHEET_WEB_APP_URL', "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE")
-if GOOGLE_SHEET_WEB_APP_URL == "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE":
-    print("WARNING: GOOGLE_SHEET_WEB_APP_URL not set in environment variables or .env. Google Sheets integration will not work!")
-
-def send_to_google_sheets(data):
-    """Sends data (attendance, session config, access logs) to Google Sheets via Web App."""
-    google_sheet_url = GOOGLE_SHEET_WEB_APP_URL
-    if not google_sheet_url or google_sheet_url == "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE":
-        print("Google Apps Script URL not configured. Skipping Google Sheets upload.")
-        return False
-    try:
-        # --- MODIFIED: Increased timeout for POST requests ---
-        response = requests.post(google_sheet_url, json=data, timeout=GOOGLE_SHEETS_REQUEST_TIMEOUT)
-        response.raise_for_status() # Raise an HTTPError for bad responses (4xx or 5xx)
-
-        try:
-            response_json = response.json()
-            print(f"Sent to Google Sheets: {data}. GAS Response (JSON): {json.dumps(response_json)}")
-            if response_json.get('result') == 'error':
-                print(f"Apps Script reported an internal error: {response_json.get('message')}")
-                return False
-
-        except json.JSONDecodeError:
-            print(f"ERROR: Google Apps Script returned non-JSON response! Status: {response.status_code}, Content: {response.text[:500]}...")
-            return False
-
-        return True
-
-    except requests.exceptions.RequestException as e:
-        print(f"ERROR sending to Google Sheets (RequestException): {e}")
-        return False
-    except Exception as e:
-        print(f"An unexpected error occurred when sending to Google Sheets: {e}")
-        return False
-
-def get_session_details_from_gs(session_id):
-    """
-    Fetches the status and full configuration (lat, lon, radius) of a specific session from Google Sheets.
-    Returns a dictionary with status (e.g., 'active', 'paused', 'closed', 'not_found', 'error'),
-    message, and session details if available.
-    """
-    google_sheet_url = GOOGLE_SHEET_WEB_APP_URL
-    if not google_sheet_url or google_sheet_url == "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE":
-        print("Google Apps Script URL not configured. Cannot get session status.")
-        return {'status': 'error', 'message': 'Google Sheets URL not configured.'}
-
-    params = {'action': 'getSessionDetails', 'session_id': session_id}
-    last_error = None
-
-    for attempt in range(MAX_RETRIES):
-        try:
-            print(f"Attempt {attempt + 1}/{MAX_RETRIES}: Fetching session details for '{session_id}' with params: {params}")
-            # --- MODIFIED: Increased timeout for GET requests ---
-            response = requests.get(google_sheet_url, params=params, timeout=GOOGLE_SHEETS_REQUEST_TIMEOUT)
-            response.raise_for_status() # Raise an HTTPError for bad responses (4xx or 5xx)
-
-            response_json = response.json()
-            print(f"Raw response from get_session_details_from_gs for '{session_id}': {response_json}")
-
-            if response_json.get('result') == 'success' and response_json.get('session'):
-                session_data = response_json.get('session')
-                # Ensure required fields are present; default if not
-                return {
-                    'status': session_data.get('status', 'not_found'), # 'active', 'paused', 'closed', 'not_found'
-                    'message': response_json.get('message', 'Session details fetched.'),
-                    'session_id': session_data.get('session_id'),
-                    'latitude': float(session_data.get('latitude', 0.0)),
-                    'longitude': float(session_data.get('longitude', 0.0)),
-                    'radius': int(session_data.get('radius', 0))
-                }
-            else:
-                # If result is not success or session details are missing (e.g., session not found)
-                return {
-                    'status': response_json.get('status', 'not_found'), # GAS should ideally return 'not_found' if session_id is valid but not in sheet
-                    'message': response_json.get('message', 'Session not found or an unknown error occurred.')
-                }
-
-        except requests.exceptions.RequestException as e:
-            last_error = e
-            print(f"Error getting session details from GS for {session_id} (RequestException) on attempt {attempt + 1}: {e}")
-            if attempt < MAX_RETRIES - 1:
-                print(f"Retrying in {RETRY_DELAY} seconds...")
-                time.sleep(RETRY_DELAY)
-        except json.JSONDecodeError as e:
-            last_error = e
-            print(f"Error decoding session details JSON for {session_id} on attempt {attempt + 1}: {e}. Raw: {response.text[:500]}")
-            # No retry for JSON decode errors, as it suggests a consistent issue with the script's output
-            break
-        except Exception as e:
-            last_error = e
-            print(f"An unexpected error occurred while fetching session details for {session_id} on attempt {attempt + 1}: {e}")
-            # No retry for general exceptions, as it suggests a consistent issue
-            break
-
-    # If all retries fail or a non-retryable error occurs
-    return {'status': 'error', 'message': f'Failed to retrieve session details after {MAX_RETRIES} attempts. Last error: {last_error}'}
-
-
-# These functions are assumed to be in attendance_utils.py and qr_generator.py
-# Make sure these files exist in the same directory as app.py
-try:
-    from attendance_utils import calculate_distance, save_attendance_local
-    from qr_generator import generate_qr_code
-except ImportError as e:
-    print(f"ERROR: Could not import utility functions: {e}")
-    print("Please ensure attendance_utils.py and qr_generator.py are in the same directory.")
-    # Define dummy functions to prevent app from crashing for now
-    def calculate_distance(lat1, lon1, lat2, lon2): return 1000000 # Always out of range
-    def save_attendance_local(data): print("Dummy save_attendance_local called.")
-    def generate_qr_code(data, filename_prefix="qr_code"): return f"qr_codes/{filename_prefix}_dummy_qr.png"
-
-
-def get_lecturer_config_defaults():
-    """Retrieves initial/default lecturer configuration from environment variables."""
-    config = {
-        'latitude': float(os.getenv('LECTURER_LATITUDE', 0.0)),
-        'longitude': float(os.getenv('LECTURER_LONGITUDE', 0.0)),
-        'radius': int(os.getenv('LECTURER_RADIUS', 0)),
-        'session_id': os.getenv('LECTURER_SESSION_ID', ''),
-        'status': 'unknown' # Default status for in-memory config
-    }
-    return config
-
-# This dictionary stores the *last configured* session details from the /lecturer_config page.
-# It's used to pre-fill the form and provide context for the QR generator.
-current_lecturer_config_in_memory = get_lecturer_config_defaults()
-
-# Dashboard login password hashing
-DASHBOARD_PASSWORD_HASH = generate_password_hash(os.getenv('DASHBOARD_PASSWORD', 'default_dashboard_password'))
-if os.getenv('DASHBOARD_PASSWORD') is None:
-    print("WARNING: DASHBOARD_PASSWORD environment variable not set. Using a default password. Set a strong password for production!")
-
-def lecturer_login_required(f):
-    """Decorator to ensure only logged-in lecturers can access a route."""
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not session.get('logged_in') or session.get('user_role') != 'lecturer':
-            flash("Unauthorized access. Lecturer privileges required.", "error")
-            return redirect(url_for('dashboard_login'))
-        return f(*args, **kwargs)
-    return decorated_function
-
+# -------------------------
+# Routes
+# -------------------------
 @app.route('/')
 def index():
-    """Renders the landing page."""
     return render_template('index.html')
 
-@app.route('/dashboard_login', methods=['GET', 'POST'])
-def dashboard_login():
-    """Handles lecturer login for the dashboard."""
-    if request.method == 'POST':
-        password = request.form.get('password')
+@app.route('/delete_lecturer/<int:lecturer_id>', methods=['POST'])
+def delete_lecturer(lecturer_id):
+    # delete lecturer logic
+    try:
+        lecturer = Lecturer.query.get(lecturer_id)
+        if not lecturer:
+            return jsonify({"success": False, "message": "Lecturer not found"}), 404
 
-        if not os.getenv('DASHBOARD_PASSWORD'):
-            flash("Dashboard password not set in server configuration. Access denied.", "error")
-            return render_template('dashboard_login.html')
+        db.session.delete(lecturer)
+        db.session.commit()
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+    
 
-        if check_password_hash(DASHBOARD_PASSWORD_HASH, password):
-            session['logged_in'] = True
-            session['user_role'] = 'lecturer'
-            flash("Logged in successfully!", "success")
-            return redirect(url_for('dashboard'))
-        else:
-            flash("Invalid Password.", "error")
-            return render_template('dashboard_login.html')
+#---------------------Routes for Departments-----------------
+@app.route("/dept/dashboard")
+@login_required
+def dept_dashboard():
+    return render_template("dept_dashboard.html")
 
-    return render_template('dashboard_login.html')
+#---------------------Routes for Attendance-----------------
+@app.route("/attendance")
+def attendance_dashboard():
+    return render_template("attendance_dashboard.html")
 
-@app.route('/dashboard')
-@lecturer_login_required
-def dashboard():
-    """Renders the lecturer dashboard, fetching session and attendance summaries from Google Sheets."""
-    google_sheet_url = GOOGLE_SHEET_WEB_APP_URL
 
-    all_sessions = []
-    if google_sheet_url and google_sheet_url != "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE":
-        try:
-            # Fetch all sessions for display in the "All Created Attendances" section
-            all_sessions_response = requests.get(google_sheet_url, params={'action': 'getAllSessions'}, timeout=GOOGLE_SHEETS_REQUEST_TIMEOUT)
-            all_sessions_response.raise_for_status()
-            all_sessions_data = all_sessions_response.json()
-            all_sessions = all_sessions_data.get('sessions', [])
-            # Sort sessions by creation date, most recent first
-            all_sessions.sort(key=lambda x: x.get('created_at', ''), reverse=True)
 
-            print(f"All sessions fetched: {all_sessions}")
+# ---------- Route for course dashboard ----------
+@app.route('/org/courses')
+@login_required
+def org_courses():
+    courses = Course.query.all()
+    return render_template('org_courses.html', courses=courses)
 
-        except requests.exceptions.RequestException as e:
-            flash(f"Error fetching all sessions from Google Sheet: {e}", "error")
-            print(f"Error fetching all sessions from Google Sheet: {e}")
-        except json.JSONDecodeError as e:
-            flash(f"Error decoding JSON for all sessions: {e}", "error")
-            print(f"Error decoding JSON for all sessions: {e}. Raw response: {all_sessions_response.text[:500]}...")
-    else:
-        flash("Google Sheet URL not configured. Cannot list sessions.", "info")
 
-    # Get summary for the *currently active* session if one is configured in memory
-    current_conf = current_lecturer_config_in_memory
-    session_id_filter = current_conf.get('session_id') # This is the active one from config page
+#------Students-----------------
+@app.route('/org_students')
+def org_students():
+    # Load whatever data you want for students page
+    students = Student.query.all()
+    return render_template('org_students.html', students=students)
 
-    attendance_summary = {'totalScans': 0, 'presentCount': 0, 'absentCount': 0}
-    portal_access_counts = {'totalAccesses': 0, 'uniqueStudents': 0}
+# -------Add Students in org---------
+@app.route('/org/add_student', methods=['POST'])
+@login_required
+def add_student():
+    full_name = request.form.get('full_name')
+    email = request.form.get('email')
+    phone = request.form.get('phone')
+    department = request.form.get('department')
+    faculty = request.form.get('faculty')
+    college = request.form.get('college')
+    student_id = request.form.get('student_id')   # New
+    index_number = request.form.get('index_number')  # New
+    level = request.form.get('level')  # New
 
-    # Only fetch summary if there's an active session configured in memory AND GS URL is set
-    if session_id_filter and google_sheet_url and google_sheet_url != "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE":
-        try:
-            summary_params = {'action': 'getSummary', 'session_id': session_id_filter}
-            print(f"Attempting to fetch attendance summary for active session with params: {summary_params}")
-            response = requests.get(google_sheet_url, params=summary_params, timeout=GOOGLE_SHEETS_REQUEST_TIMEOUT)
-            response.raise_for_status()
-            summary_data = response.json()
-            print(f"Successfully fetched attendance summary for active session: {summary_data}")
+    profile_pic = request.files.get('profile_pic')
+    profile_pic_filename = None
 
-            attendance_summary['totalScans'] = summary_data.get('totalScans', 0)
-            attendance_summary['presentCount'] = summary_data.get('presentCount', 0)
-            attendance_summary['absentCount'] = summary_data.get('absentCount', 0)
+    if profile_pic:
+        filename = secure_filename(profile_pic.filename)
+        profile_pic.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        profile_pic_filename = filename
 
-        except requests.exceptions.RequestException as e:
-            flash(f"Error fetching attendance summary for active session from Google Sheet: {e}", "error")
-            print(f"Error fetching attendance summary for active session from Google Sheet: {e}")
-            attendance_summary = {'totalScans': 0, 'presentCount': 0, 'absentCount': 0, 'message': f"Data unavailable: {e}"}
-        except json.JSONDecodeError as e:
-            flash(f"Error decoding JSON from Google Sheet summary (active session): {e}", "error")
-            print(f"Error decoding JSON from Google Sheet summary (active session): {e}. Raw response: {response.text[:500]}...")
-            attendance_summary = {'totalScans': 0, 'presentCount': 0, 'absentCount': 0, 'message': f"Data unavailable: {e}"}
+    student = Student(
+        full_name=full_name,
+        email=email,
+        phone=phone,
+        department=department,
+        faculty=faculty,
+        college=college,
+        student_id=student_id,          # New
+        index_number=index_number,      # New
+        level=level,      # New
+        profile_pic=profile_pic_filename
+    )
+    db.session.add(student)
+    db.session.commit()
 
-        try:
-            access_params = {'action': 'getAccessCounts', 'session_id': session_id_filter}
-            print(f"Attempting to fetch portal access counts for active session with params: {access_params}")
-            access_response = requests.get(google_sheet_url, params=access_params, timeout=GOOGLE_SHEETS_REQUEST_TIMEOUT)
-            access_response.raise_for_status()
-            access_data = access_response.json()
-            print(f"Successfully fetched portal access counts for active session: {access_data}")
-
-            portal_access_counts['totalAccesses'] = access_data.get('totalAccesses', 0)
-            portal_access_counts['uniqueStudents'] = access_data.get('uniqueStudents', 0)
-
-        except requests.exceptions.RequestException as e:
-            flash(f"Error fetching portal access counts for active session from Google Sheet: {e}", "error")
-            print(f"Error fetching portal access counts for active session from Google Sheet: {e}")
-            portal_access_counts = {'totalAccesses': 0, 'uniqueStudents': 0, 'message': f"Data unavailable: {e}"}
-        except json.JSONDecodeError as e:
-            flash(f"Error decoding JSON from Google Sheet access counts (active session): {e}", "error")
-            print(f"Error decoding JSON from Google Sheet access counts (active session): {e}. Raw response: {access_response.text[:500]}...")
-            portal_access_counts = {'totalAccesses': 0, 'uniqueStudents': 0, 'message': f"Data unavailable: {e}"}
-    else:
-        # If no session is configured in memory, or GS URL is bad, default to no summary
-        print("No active session configured or Google Sheet URL not set. Skipping summary fetch.")
-
-    attendance_data = [] # Placeholder if you were to display detailed attendance locally
-
-    return render_template('dashboard.html',
-                            current_session=current_conf,
-                            total_scans_session=attendance_summary['totalScans'],
-                            present_count=attendance_summary['presentCount'],
-                            absent_count=attendance_summary['absentCount'],
-                            attendance_data=attendance_data,
-                            total_portal_accesses=portal_access_counts['totalAccesses'],
-                            unique_portal_students=portal_access_counts['uniqueStudents'],
-                            all_sessions=all_sessions # Pass all sessions to the template
-                            )
-
-@app.route('/logout')
-def logout():
-    """Logs the lecturer out."""
-    session.pop('logged_in', None)
-    session.pop('user_role', None)
-    flash("You have been logged out.", "info")
-    return redirect(url_for('dashboard_login'))
-
-@app.route('/lecturer_config', methods=['GET', 'POST'])
-@lecturer_login_required
-def lecturer_config_route():
-    """Handles lecturer configuring a new attendance session or updating an existing one."""
-    global current_lecturer_config_in_memory
-    if request.method == 'POST':
-        try:
-            latitude = float(request.form['latitude'])
-            longitude = float(request.form['longitude'])
-            radius = int(request.form['radius'])
-            session_id = request.form['session_id'].strip()
-
-            if not (-90 <= latitude <= 90):
-                raise ValueError("Latitude must be between -90 and 90.")
-            if not (-180 <= longitude <= 180):
-                raise ValueError("Longitude must be between -180 and 180.")
-            if not (radius > 0):
-                raise ValueError("Radius must be a positive number.")
-
-            if not session_id:
-                # If session_id is not provided, generate a new one
-                now_ghana = get_ghana_time()
-                session_id = f"SESSION_{now_ghana.strftime('%Y%m%d_%H%M%S')}"
-
-            # Update in-memory config - this keeps track of the *last configured* session
-            current_lecturer_config_in_memory['latitude'] = latitude
-            current_lecturer_config_in_memory['longitude'] = longitude
-            current_lecturer_config_in_memory['radius'] = radius
-            current_lecturer_config_in_memory['session_id'] = session_id
-            current_lecturer_config_in_memory['status'] = 'active' # Set status to active in memory immediately
-
-            # Send to Google Sheets to create/update session status in the "Sessions" sheet
-            session_data = {
-                'action': 'createOrUpdateSession',
-                'session_id': session_id,
-                'latitude': latitude,
-                'longitude': longitude,
-                'radius': radius,
-                'status': 'active' # Always set to active when lecturer configures/reconfigures
-            }
-            sheets_sent = send_to_google_sheets(session_data)
-            if not sheets_sent:
-                flash("Configuration saved, but could not sync session state to Google Sheets. Check server logs.", "warning")
-            else:
-                flash("Configuration saved successfully! This session is now active and recorded.", "success")
-
-            # Log this config change as an access event (optional, for tracking lecturer actions)
-            log_data = {
-                'action': 'logAccess',
-                'session_id': session_id,
-                'student_id': 'LECTURER_CONFIG_UPDATE'
-            }
-            send_to_google_sheets(log_data)
-
-            return redirect(url_for('qr_generator_page'))
-
-        except ValueError as e:
-            flash(f"Invalid input: {e}", "error")
-        except Exception as e:
-            flash(f"An unexpected error occurred: {e}", "error")
-
-    return render_template('lecturer_config.html', config=current_lecturer_config_in_memory)
-
-@app.route('/qr_generator', methods=['GET', 'POST'])
-@lecturer_login_required
-def qr_generator_page():
-    config_for_qr = current_lecturer_config_in_memory
-    qr_code_path = None
-    generated_link = None
-    student_id_display = None
-
-    session_id_to_use = config_for_qr.get('session_id')
-
-    # If no session ID is even configured in memory, prompt the user
-    if not session_id_to_use:
-        flash("Please configure an active session on the Lecturer Config page first to generate a QR code.", "error")
-        # Ensure we pass the (empty) config for the template to render correctly
-        return render_template('qr_generator.html', current_session=config_for_qr, qr_code_path=None, generated_link=None, student_id_display=None)
-
-    # Get the real-time status and full details of the configured session from Google Sheet
-    session_details_from_gs = get_session_details_from_gs(session_id_to_use)
-    session_status = session_details_from_gs.get('status')
-
-    # If the session is not 'active' (could be 'paused', 'closed', 'not_found', or 'error')
-    if session_status != 'active':
-        flash_message = f"The configured session '{session_id_to_use}' is currently '{session_status}'. "
-        if session_status == 'not_found':
-            flash_message += "It might not have been recorded in the system, or has been deleted."
-        elif session_status == 'error':
-            flash_message += f"There was an error fetching its status: {session_details_from_gs.get('message', 'Unknown error')}. Please check network or try again."
-        else: # paused, closed
-            flash_message += "Please make it active on the Dashboard or Lecturer Config page before generating a QR code."
-
-        flash(flash_message, "warning")
-
-        # Merge fetched details into config_for_qr for display in the 'Active Session Details' box
-        config_for_qr.update({
-            'status': session_status,
-            'latitude': session_details_from_gs.get('latitude', config_for_qr.get('latitude')),
-            'longitude': session_details_from_gs.get('longitude', config_for_qr.get('longitude')),
-            'radius': session_details_from_gs.get('radius', config_for_qr.get('radius'))
-        })
-
-        return render_template('qr_generator.html',
-                               current_session=config_for_qr, # Pass the updated config
-                               qr_code_path=None,
-                               generated_link=None,
-                               student_id_display=None)
-
-    # If we reach here, the session is 'active' as per Google Sheets.
-    # We should update config_for_qr with the latest details from GS for display accuracy
-    config_for_qr.update({
-        'status': session_status,
-        'latitude': session_details_from_gs.get('latitude'),
-        'longitude': session_details_from_gs.get('longitude'),
-        'radius': session_details_from_gs.get('radius')
+    return jsonify({
+        'success': True,
+        'student': {
+            'id': student.id,
+            'student_id': student.student_id,           # New
+            'index_number': student.index_number,       # New
+            'level': student.level,       # New
+            'full_name': student.full_name,
+            'email': student.email,
+            'phone': student.phone,
+            'department': student.department,
+            'faculty': student.faculty,
+            'college': student.college,
+            'profile_pic': url_for('static', filename=f'uploads/{student.profile_pic}') if student.profile_pic else None
+        }
     })
 
 
-    if request.method == 'POST':
-        student_id_qr = request.form.get('student_id_qr')
-        if not student_id_qr:
-            flash("Please enter a Student ID to generate the QR code.", "error")
-            return render_template('qr_generator.html',
-                                    current_session=config_for_qr,
-                                    qr_code_path=None,
-                                    generated_link=None,
-                                    student_id_display=None)
+# ---------- Add Course ----------
+@app.route('/org/add_course', methods=['POST'])
+@login_required
+def add_course():
+    course_name = request.form.get('course_name')
+    course_code = request.form.get('course_code')
+    level = request.form.get('level')
+    department = request.form.get('department')
 
-        base_url = request.url_root.rstrip('/')
-        # QR code should point to the check-in page with just the session ID
-        checkin_url_for_qr = f"{base_url}/checkin/{session_id_to_use}"
+    # Get the logged-in organisation ID
+    org_id = current_user.id  
 
-        qr_code_filename_base = f"{session_id_to_use.strip()}_{student_id_qr.strip()}"
+    course = Course(
+        org_id=org_id,
+        course_name=course_name,
+        course_code=course_code,
+        level=level,
+        department=department
+    )
+    db.session.add(course)
+    db.session.commit()
 
-        try:
-            qr_code_path_relative = generate_qr_code(checkin_url_for_qr, filename_prefix=qr_code_filename_base)
-            qr_code_path = url_for('static', filename=qr_code_path_relative)
-            generated_link = checkin_url_for_qr
-            student_id_display = student_id_qr
-
-            flash(f"QR Code generated for Student: {student_id_qr}, Session: {session_id_to_use}!", "success")
-
-        except Exception as e:
-            flash(f"Error generating QR code: {e}", "error")
-            print(f"Error generating QR code for {student_id_qr}: {e}")
-            qr_code_path = None
-            generated_link = None
-            student_id_display = None
-
-    # This part handles the initial GET request to load the page
-    # or re-renders after a POST submission.
-    return render_template('qr_generator.html',
-                            current_session=config_for_qr,
-                            qr_code_path=qr_code_path,
-                            generated_link=generated_link,
-                            student_id_display=student_id_display)
-
-
-@app.route('/checkin/<session_id_from_qr>') # Route now expects the session_id
-def student_checkin(session_id_from_qr): # Parameter name changed
-    """
-    Renders the student check-in page. The QR code encodes the session_id,
-    and students will enter their details on this page.
-    """
-    message_override = None
-    hide_geolocation = False
-    lecturer_conf_for_template = {} # To hold the specific session's config
-
-    google_sheet_url = GOOGLE_SHEET_WEB_APP_URL
-    if not google_sheet_url or google_sheet_url == "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE":
-        message_override = "System error: Google Sheet URL not configured. Cannot verify session or attendance."
-        hide_geolocation = True
-    else:
-        # Fetch the full session details from Google Sheets using the session_id_from_qr
-        session_details_response = get_session_details_from_gs(session_id_from_qr)
-        session_status = session_details_response.get('status')
-        session_message = session_details_response.get('message', 'Unknown error.')
-
-        if session_status == 'active':
-            # Populate lecturer_conf_for_template with the active session's details from GS
-            # These values are needed by the client-side JS for geolocation check
-            lecturer_conf_for_template = {
-                'session_id': session_id_from_qr,
-                'latitude': session_details_response.get('latitude'),
-                'longitude': session_details_response.get('longitude'),
-                'radius': session_details_response.get('radius')
-            }
-
-            # Log initial portal access for this session (before student enters ID)
-            access_data = {
-                'action': 'logAccess',
-                'session_id': session_id_from_qr,
-                'student_id': 'PORTAL_ACCESS_INITIAL' # Generic ID for initial page load
-            }
-            try:
-                # --- MODIFIED: Increased timeout for logging initial access ---
-                requests.post(google_sheet_url, json=access_data, timeout=GOOGLE_SHEETS_REQUEST_TIMEOUT)
-                print(f"Logged initial portal access for session {session_id_from_qr} to Google Sheet.")
-            except requests.exceptions.RequestException as e:
-                print(f"Error logging initial portal access for session {session_id_from_qr} to Google Sheet: {e}")
-
-        elif session_status == 'error':
-            message_override = f"System error: Could not verify session status. {session_message}. Please try again later."
-            hide_geolocation = True
-        elif session_status == 'not_found':
-            message_override = f"Attendance session '{session_id_from_qr}' not found or never started. Please contact your lecturer."
-            hide_geolocation = True
-        else: # Covers 'paused' and 'closed'
-            message_override = f"Attendance for session '{session_id_from_qr}' is currently {session_status}. You cannot submit attendance at this time."
-            hide_geolocation = True
-
-    return render_template('checkin.html',
-                            session_id=session_id_from_qr, # Pass the session_id from the URL to the template
-                            message_override=message_override,
-                            hide_geolocation=hide_geolocation,
-                            lecturer_conf=lecturer_conf_for_template) # Pass session details for JS
-
-
-@app.route('/submit_attendance', methods=['POST'])
-def submit_attendance():
-    """Receives attendance submission from student, performs validation, and logs to Google Sheets."""
-    data = request.get_json()
-    student_id = data.get('student_id')
-    student_name = data.get('student_name')
-    student_index = data.get('student_index')
-    student_lat = data.get('latitude')
-    student_lon = data.get('longitude')
-    session_id = data.get('session_id') # CRITICAL: Get session_id from the form submission
-
-    if not all([student_id, student_name, student_index, session_id]):
-        return jsonify(status="error", message="Missing required student information or session ID.")
-
-    # Fetch the actual lecturer configuration for THIS specific session from Google Sheets
-    lecturer_conf = {} # Initialize empty
-    session_details_response = get_session_details_from_gs(session_id)
-
-    if session_details_response.get('status') == 'active':
-        lecturer_conf['latitude'] = session_details_response.get('latitude')
-        lecturer_conf['longitude'] = session_details_response.get('longitude')
-        lecturer_conf['radius'] = session_details_response.get('radius')
-        # Also ensure to pass these values for logging/calculation purposes if needed below
-        lecturer_conf['session_id'] = session_id # Ensure session_id is consistent
-    else:
-        # If session is not active or not found, return an error immediately
-        return jsonify(status="error", message=f"Attendance for session '{session_id}' is currently {session_details_response.get('status', 'unknown')}. Cannot record attendance.")
-
-    if not lecturer_conf or 'latitude' not in lecturer_conf or lecturer_conf.get('radius') is None:
-        return jsonify(status="error", message="Classroom location or radius not properly configured for this session. Attendance cannot be recorded.")
-
-    class_lat = lecturer_conf.get('latitude')
-    class_lon = lecturer_conf.get('longitude')
-    allowed_radius = lecturer_conf.get('radius')
-
-    google_sheet_url = GOOGLE_SHEET_WEB_APP_URL
-    if google_sheet_url and google_sheet_url != "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE":
-        # Check for duplicate submission for THIS student in THIS active session
-        check_params = {
-            'action': 'checkStudentAttendance',
-            'student_id': student_id,
-            'session_id': session_id # Use the session_id from the student's submission
+    return jsonify({
+        'success': True,
+        'course': {
+            'id': course.id,
+            'course_name': course.course_name,
+            'course_code': course.course_code,
+            'level': course.level,
+            'department': course.department
         }
-        try:
-            print(f"Checking for duplicate attendance for student {student_id}, session {session_id}...")
-            # --- MODIFIED: Increased timeout for checkStudentAttendance ---
-            check_response = requests.get(google_sheet_url, params=check_params, timeout=GOOGLE_SHEETS_REQUEST_TIMEOUT)
-            check_response.raise_for_status()
-            check_data = check_response.json()
-
-            print(f"Apps Script checkStudentAttendance response: {check_data}")
-
-            if check_data.get('hasAttended'):
-                print(f"Student {student_id} has already attended session {session_id}.")
-                return jsonify(status="error", message="You have already submitted attendance for this session.")
-            else:
-                print(f"Student {student_id} has not yet attended session {session_id}. Proceeding with submission.")
-
-        except requests.exceptions.RequestException as e:
-            print(f"ERROR checking duplicate attendance (RequestException): {e}. This error will not prevent submission for now.")
-            pass # Allow submission if GS check fails, but log the error. You might want to be stricter.
-        except json.JSONDecodeError as e:
-            print(f"ERROR decoding JSON from attendance check: {e}. Raw response: {check_response.text[:500]}...")
-            pass # Allow submission if JSON is malformed, but log.
-        except Exception as e:
-            print(f"An unexpected error occurred during duplicate attendance check: {e}. This error will not prevent submission for now.")
-            pass
-    else:
-        print("Google Apps Script URL not configured for duplicate attendance check. Skipping check.")
+    })
 
 
-    now_ghana = get_ghana_time()
-    timestamp = now_ghana.strftime("%Y-%m-%d %H:%M:%S")
+# ---------- Edit Course ----------
+@app.route('/org/edit_course/<int:course_id>', methods=['POST'])
+@login_required
+def edit_course(course_id):
+    course = Course.query.get_or_404(course_id)
 
-    status = "Absent"
-    message = ""
-    distance = None
+    # Ensure the course belongs to the current organisation
+    if course.org_id != current_user.id:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
 
-    if student_lat is None or student_lon is None:
-        status = "Absent (Geolocation Failed)"
-        message = "Could not get your location. Please ensure location services are enabled and permitted."
-    elif class_lat is None or class_lon is None or allowed_radius is None:
-        status = "Absent (Session Config Error)"
-        message = "Classroom location or radius not properly configured for this session."
-    else:
-        distance = calculate_distance(student_lat, student_lon, class_lat, class_lon)
-        if distance <= allowed_radius:
-            status = "Present"
-            message = "You are marked present! Welcome."
-        else:
-            status = f"Absent (Out of Range)"
-            message = f"You are {distance:.2f} meters away."
-            
-    ip_address = request.remote_addr
-    user_agent = request.headers.get('User-Agent', 'Unknown')
-    device_key = f"{ip_address}_{user_agent}"
+    course.course_name = request.form.get('course_name')
+    course.course_code = request.form.get('course_code')
+    course.level = request.form.get('level')
+    course.department = request.form.get('department')
 
-    # Prevent local duplicate submissions per device for this session
-    already_submitted_device = any(
-        r.get('Session_ID') == session_id and r.get('Device_Key') == device_key
-        for r in in_memory_attendance_records
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'course': {
+            'id': course.id,
+            'course_name': course.course_name,
+            'course_code': course.course_code,
+            'level': course.level,
+            'department': course.department
+        }
+    })
+
+
+# ---------- Delete Course ----------
+@app.route('/org/delete_course/<int:course_id>', methods=['POST'])
+@login_required
+def delete_course(course_id):
+    course = Course.query.get_or_404(course_id)
+
+    # Ensure the course belongs to the current organisation
+    if course.org_id != current_user.id:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+
+    db.session.delete(course)
+    db.session.commit()
+
+    return jsonify({'success': True, 'id': course_id})
+
+
+
+#---------------------------------
+#Org_Lecturer registration
+#--------------------------------
+@app.route('/org_lecturers')
+@login_required
+def org_lecturers():
+    lecturers = Lecturer.query.all()
+    return render_template(
+        'org_lecturers.html',
+        lecturers=lecturers,
+        csrf_token=generate_csrf()
     )
-    if already_submitted_device:
-        return jsonify(status="error", message="Attendance already submitted from this device.  You are allowed to submit only once")
 
-    # Prevent duplicate per Student_ID + Session_ID
-    already_submitted_student = any(
-        r['Student_ID'] == student_id and r['Session_ID'] == session_id
-        for r in in_memory_attendance_records
-    )
-    if already_submitted_student:
-        return jsonify(status="error", message="You already submitted attendance for this session.")
+@app.route('/register_lecturer_inline', methods=['POST'])
+@login_required
+def register_lecturer_inline():
+    try:
+        full_name = request.form.get('full_name')
+        email = request.form.get('email')
+        phone = request.form.get('phone')
+        college = request.form.get('college')
+        faculty = request.form.get('faculty')
+        department = request.form.get('department')
+
+        if not full_name or not email:
+            return jsonify({"success": False, "message": "Full name and email are required"}), 400
+
+        new_lecturer = Lecturer(
+            full_name=full_name,
+            email=email,
+            phone=phone,
+            college=college,
+            faculty=faculty,
+            department=department
+        )
+
+        db.session.add(new_lecturer)
+        db.session.commit()
+
+        # Return JSON so JS can append row without reload
+        return jsonify({
+            "success": True,
+            "lecturer": {
+                "id": new_lecturer.id,
+                "full_name": new_lecturer.full_name,
+                "email": new_lecturer.email,
+                "college": new_lecturer.college,
+                "faculty": new_lecturer.faculty,
+                "department": new_lecturer.department
+            }
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "message": str(e)}), 500
 
 
 
-    record_data = {
-        'action': 'submitAttendance',
-        'Timestamp': timestamp,
-        'Student_ID': student_id,
-        'Student_Name': student_name,
-        'Student_Index': student_index,
-        'Latitude': student_lat,
-        'Longitude': student_lon,
-        'Status': status,
-        'Distance': f"{distance:.2f}" if distance is not None and distance != float('inf') else 'N/A',
-        'Session_ID': session_id, # Use the session_id from the student's submission
-        'Class_Lat': class_lat,
-        'Class_Lon': class_lon,
-        'Radius_Meters': allowed_radius,
-        'IP_Address': ip_address,      # NEW
-        'User_Agent': user_agent,      # NEW
-        'Device_Key': device_key   # NEW
-    }
 
-    save_attendance_local(record_data) # Keep for local testing if needed, though ephemeral on Render
-    in_memory_attendance_records.append(record_data) # Ephemeral on Render
-    sheets_sent = send_to_google_sheets(record_data) # Persistent in Google Sheets
+@app.route('/save_name', methods=['POST'])
+@login_required
+def save_name():
+    name = request.form.get('name')
+    if name:
+        current_user.name = name
+        db.session.commit()
+        flash('Name updated.', 'success')
 
-    if not sheets_sent:
-        message += " (Note: Could not sync to Google Sheets, check server logs for details)."
+    # Redirect based on role
+    if current_user.role == 'org_admin':
+        return redirect(url_for('org_dashboard'))
+    elif current_user.role == 'school_lecturer':
+        return redirect(url_for('school_lecturer_dashboard'))
+    elif current_user.role == 'solo_lecturer':
+        return redirect(url_for('solo_lecturer_dashboard'))
+    else:
+        return redirect(url_for('login'))
 
-    return jsonify(status="success" if "Present" in status else "error", message=message)
 
-@app.route('/update_session_status', methods=['POST'])
-@lecturer_login_required
-def update_session_status():
-    """Allows lecturer to change a session's status (active, paused, closed)."""
-    session_id = request.form.get('session_id')
-    new_status = request.form.get('status') # 'active', 'paused', 'closed'
+# -------- Organisation Registration --------
+@app.route('/register_org', methods=['GET', 'POST'])
+def register_org():
+    """Register a new organisation admin and generate secret code."""
+    if request.method == 'POST':
+        org_name = request.form['org_name'].strip()
+        org_email = request.form['org_email'].strip()
+        password = request.form['password']
 
-    google_sheet_url = GOOGLE_SHEET_WEB_APP_URL
-    if not google_sheet_url or google_sheet_url == "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE":
-        flash("Google Sheet URL not configured. Cannot update session status.", "error")
-        return redirect(url_for('dashboard'))
+        # Check for existing org or user
+        if Organisation.query.filter_by(name=org_name).first():
+            flash("Organisation already exists.", "danger")
+            return redirect(url_for('register_org'))
 
-    if not session_id or not new_status:
-        flash("Missing session ID or new status.", "error")
-        return redirect(url_for('dashboard'))
+        if Organisation.query.filter_by(email=org_email).first():
+            flash("Organisation email already exists.", "danger")
+            return redirect(url_for('register_org'))
+
+        if User.query.filter_by(email=org_email).first():
+            flash("This email is already used for another account. Please log in instead.", "danger")
+            return redirect(url_for('login', role='org_admin'))
+
+        # Generate secret code
+        secret_code = secrets.token_hex(4).upper()
+
+        # Handle logo upload
+        file = request.files.get('logo')
+        filename = None
+        if file and allowed_logo(file.filename):
+            filename = secrets.token_hex(8) + "_" + secure_filename(file.filename)
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+
+        # Create organisation
+        org = Organisation(
+            name=org_name,
+            email=org_email,
+            logo_filename=filename,
+            secret_code=secret_code
+        )
+        db.session.add(org)
+        db.session.commit()
+
+        # Create admin user
+        admin_user = User(
+            email=org_email,
+            password_hash=generate_password_hash(password),
+            role='org_admin',
+            logo_filename=filename,
+            organisation_id=org.id
+        )
+        db.session.add(admin_user)
+        db.session.commit()
+
+        # Send secret code email
+        send_secret_code(org_email, org_name, secret_code)
+
+        flash(f"Organisation registered successfully! Your secret code is {secret_code}. Check your email.", "success")
+        return redirect(url_for('login', role='org_admin'))
+
+    return render_template('register_org.html')
+
+
+@app.route('/upload_students', methods=['POST'])
+@role_required('org_admin')
+def upload_students():
+    file = request.files.get('file')
+    if not file:
+        flash("No file uploaded", "danger")
+        return redirect(url_for('org_dashboard'))
+
+    filename = file.filename.lower()
 
     try:
-        update_data = {
-            'action': 'updateSessionStatus',
-            'session_id': session_id,
-            'status': new_status
-        }
-        # --- MODIFIED: Increased timeout for updateSessionStatus ---
-        response = requests.post(google_sheet_url, json=update_data, timeout=GOOGLE_SHEETS_REQUEST_TIMEOUT)
-        response.raise_for_status()
-        response_json = response.json()
-
-        if response_json.get('result') == 'success':
-            flash(f"Session '{session_id}' status updated to '{new_status}' successfully!", "success")
-            # If the session being updated is the one in lecturer_config_in_memory, update its status too
-            if current_lecturer_config_in_memory.get('session_id') == session_id:
-                current_lecturer_config_in_memory['status'] = new_status # Update local in-memory status
+        if filename.endswith('.csv'):
+            df = pd.read_csv(file)
+        elif filename.endswith(('.xls', '.xlsx')):
+            df = pd.read_excel(file)
         else:
-            flash(f"Failed to update session status: {response_json.get('message', 'Unknown error')}", "error")
-            print(f"Failed to update session status for {session_id} to {new_status}. GAS Response: {response_json}")
+            flash("Unsupported file format. Please upload CSV or Excel.", "danger")
+            return redirect(url_for('org_dashboard'))
 
-    except requests.exceptions.RequestException as e:
-        flash(f"Network error updating session status: {e}", "error")
-        print(f"Network error updating session status for {session_id}: {e}")
-    except json.JSONDecodeError as e:
-        flash(f"Error decoding response updating session status: {e}", "error")
-        print(f"Error decoding JSON updating session status for {session_id}: {e}. Raw: {response.text[:500]}")
+        # Save students to DB
+        for _, row in df.iterrows():
+            student = Student(
+                index_number=str(row['index_number']),
+                name=row['name'],
+                department_id=row.get('department_id'),
+                organisation_id=session.get('organisation_id')  # store org_id in session on login
+            )
+            db.session.add(student)
+        db.session.commit()
+
+        flash("Students uploaded successfully!", "success")
     except Exception as e:
-        flash(f"An unexpected error occurred: {e}", "error")
-        print(f"An unexpected error occurred updating session status for {session_id}: {e}")
+        db.session.rollback()
+        flash(f"Error uploading students: {e}", "danger")
 
-    return redirect(url_for('dashboard'))
+    return redirect(url_for('org_dashboard'))
 
+
+
+# -------- School Lecturer Registration --------
+@app.route('/register_lecturer', methods=['GET', 'POST'])
+def register_lecturer():
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        secret_code = request.form['secret_code'].strip()
+
+        org = Organisation.query.filter_by(secret_code=secret_code).first()
+        if not org:
+            flash("Invalid secret code. Contact your organisation admin.", "danger")
+            return redirect(url_for('register_lecturer'))
+
+        if User.query.filter_by(email=email).first():
+            flash("Email already exists.", "danger")
+            return redirect(url_for('register_lecturer'))
+
+        user = User(
+            email=email,
+            password_hash=generate_password_hash(password),
+            role='school_lecturer',
+            organisation_id=org.id
+        )
+        db.session.add(user)
+        db.session.commit()
+
+        flash("Registration successful! Please log in.", "success")
+        return redirect(url_for('login'))
+
+    return render_template('register_lecturer.html')
+
+
+# -------- Solo Lecturer Registration --------
+@app.route('/register_solo', methods=['GET', 'POST'])
+def register_solo():
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+
+        if User.query.filter_by(email=email).first():
+            flash("Email already exists.", "danger")
+            return redirect(url_for('register_solo'))
+
+        user = User(
+            email=email,
+            password_hash=generate_password_hash(password),
+            role='solo_lecturer'
+        )
+        db.session.add(user)
+        db.session.commit()
+
+        flash("Registration successful! Please log in.", "success")
+        return redirect(url_for('login'))
+
+    return render_template('register_solo.html')
+
+
+# -------- Login --------
+@app.route('/login', methods=['GET', 'POST'])
+@csrf.exempt  # ✅ This disables CSRF only for login
+def login():
+    role = request.args.get('role', '')  # optional: ?role=org_admin
+    if request.method == 'POST':
+        email = request.form['email'].strip()
+        password = request.form['password'].strip()
+
+        user = User.query.filter_by(email=email).first()
+        if not user or not check_password_hash(user.password_hash, password):
+            flash("Invalid email or password.", "danger")
+            return redirect(url_for('login', role=role))
+
+        # Save session
+        session['logged_in'] = True
+        session['user_id'] = user.id
+        session['email'] = user.email
+        session['role'] = user.role
+        session['lecturer_logo'] = user.logo_filename
+
+        login_user(user)  # ✅ Required for Flask-Login
+
+        # ✅ Redirect based on role
+        dashboard_routes = {
+            'org_admin': 'org_dashboard',
+            'school_lecturer': 'school_lecturer_dashboard',
+            'solo_lecturer': 'solo_lecturer_dashboard'
+        }
+        return redirect(url_for(dashboard_routes.get(user.role, 'index')))
+
+    # Only show the "register" link for the clicked role
+    register_links = {
+        'org_admin': url_for('register_org'),
+        'school_lecturer': url_for('register_lecturer'),
+        'solo_lecturer': url_for('register_solo')
+    }
+    register_url = register_links.get(role, '')
+
+    return render_template('login.html', role=role, register_url=register_url)
+
+
+
+
+# -------- Logout --------
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash("Logged out successfully.", "info")
+    return redirect(url_for('index'))
+
+
+# -------- Dashboards --------
+@csrf.exempt
+@app.route('/org/dashboard')
+@role_required('org_admin')
+def org_dashboard():
+    org = db.session.get(User, session['user_id']).organisation
+    lecturers = User.query.filter_by(organisation_id=org.id, role='school_lecturer').all()
+    departments = Department.query.filter_by(organisation_id=org.id).all()
+    students = Student.query.filter_by(organisation_id=org.id).count()
+    return render_template(
+        'org_dashboard.html',
+        org=org,
+        lecturers=lecturers,
+        departments=departments,
+        student_count=students
+    )
+    
+@app.route('/register_course', methods=['POST'])
+@role_required('org_admin')
+@login_required
+def register_course():
+    course_name = request.form.get('course_name')
+    course_code = request.form.get('course_code')
+
+    if not course_name or not course_code:
+        flash("Course name and code are required.", "danger")
+        return redirect(url_for('org_dashboard'))
+
+    existing = Course.query.filter_by(course_code=course_code, organisation_id=session['organisation_id']).first()
+    if existing:
+        flash("Course code already exists.", "warning")
+        return redirect(url_for('org_dashboard'))
+
+    new_course = Course(
+        name=course_name,
+        course_code=course_code,
+        organisation_id=session['organisation_id']
+    )
+    db.session.add(new_course)
+    db.session.commit()
+
+    flash("✅ Course registered successfully.", "success")
+    return redirect(url_for('org_dashboard'))
+
+
+
+@csrf.exempt
+@app.route('/lecturer/dashboard')
+@role_required('school_lecturer')
+def school_lecturer_dashboard():
+    user = db.session.get(User, session['user_id'])
+    sessions = SessionModel.query.filter_by(user_id=user.id).all()
+    return render_template('school_lecturer_dashboard.html', sessions=sessions)
+
+
+@csrf.exempt
+@app.route('/solo/dashboard')
+@role_required('solo_lecturer')
+def solo_lecturer_dashboard():
+    user = db.session.get(User, session['user_id'])
+    sessions = SessionModel.query.filter_by(user_id=user.id).all()
+    return render_template('solo_lecturer_dashboard.html', sessions=sessions)
+
+
+# -------------------------
+# Run
+# -------------------------
 if __name__ == '__main__':
-    # Create a 'qr_codes' directory if it doesn't exist
-    if not os.path.exists('static/qr_codes'):
-        os.makedirs('static/qr_codes')
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     app.run(debug=True)

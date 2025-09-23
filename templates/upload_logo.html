@@ -1,0 +1,40 @@
+{% extends "base.html" %} {% block title %}Upload Logo{% endblock %} {% block content %}
+<div class="container py-5">
+
+    <!-- Page Title -->
+    <h2 class="mb-4 text-center">
+        <i class="fas fa-image me-2"></i> Upload Your School Logo
+    </h2>
+
+    <!-- Logo Preview (if exists) -->
+    <div class="text-center mb-4">
+        {% if session.get('lecturer_logo') %}
+        <img src="{{ url_for('static', filename=session['lecturer_logo'].replace('static/', '')) }}" alt="Current Logo" class="img-fluid mb-2" style="max-height: 150px;">
+        <p class="text-muted">This is your current logo.</p>
+        {% else %}
+        <p class="text-muted">No logo uploaded yet. Choose a file below to upload.</p>
+        {% endif %}
+    </div>
+
+    <!-- Upload Form -->
+    <form method="POST" enctype="multipart/form-data" class="card shadow-sm p-4 mx-auto" style="max-width: 500px;">
+        <div class="mb-3">
+            <label for="logo" class="form-label fw-bold">Select Logo File</label>
+            <input type="file" class="form-control" id="logo" name="logo" accept=".png,.jpg,.jpeg" required>
+            <div class="form-text">Allowed formats: PNG, JPG, JPEG. Recommended size: under 1MB.</div>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100">
+            <i class="fas fa-upload me-2"></i> Upload Logo
+        </button>
+    </form>
+
+    <!-- Back to Dashboard -->
+    <div class="text-center mt-4">
+        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Back to Dashboard
+        </a>
+    </div>
+
+</div>
+{% endblock %}

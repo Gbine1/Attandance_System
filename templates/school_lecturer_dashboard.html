@@ -1,0 +1,58 @@
+{% extends "base_dashboard.html" %} {% block title %}School Lecturer Dashboard{% endblock %} {% block content %}
+
+<div class="dashboard-container">
+
+    <div class="cards-row">
+        <div class="card">
+            <h3>{{ sessions|length }}</h3>
+            <p>My Sessions</p>
+        </div>
+        <div class="card">
+            <h3>{{ active_sessions }}</h3>
+            <p>Active Now</p>
+        </div>
+        <div class="card">
+            <h3>{{ total_attendance }}</h3>
+            <p>Total Attendance</p>
+        </div>
+        <div class="card">
+            <h3>{{ get_ghana_time().strftime('%H:%M') }}</h3>
+            <p>Current Time</p>
+        </div>
+    </div>
+
+    <div class="charts-row">
+        <div class="chart-card">
+            <h4>Session Attendance</h4><canvas id="sessionChart"></canvas></div>
+        <div class="chart-card">
+            <h4>Daily Check-ins</h4><canvas id="dailyChart"></canvas></div>
+    </div>
+
+    <div class="table-card full-width">
+        <h4>My Sessions</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in sessions %}
+                <tr>
+                    <td>{{ s.session_id }}</td>
+                    <td>{{ s.status }}</td>
+                    <td>{{ s.created_at.strftime('%d %b %Y') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    renderSampleCharts();
+</script>
+
+{% endblock %}

@@ -1,57 +1,91 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="light">
+<!-- Bootstrap 5.3 supports light/dark themes -->
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Attendance System{% endblock %}</title>
+    <title>{% block title %}Locify - Attedance System{% endblock %}</title>
 
-    {# Favicon (optional but good practice) #}
-    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.svg') }}">
 
-    {# Bootstrap CSS (Minified) #}
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-    
-    {# Font Awesome CSS (Minified - All free icons) #}
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <!-- Bootstrap CSS with dark/light support -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
-    {# Custom Stylesheet #}
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    
-    {# Page-specific styles (if any inline styles from old code, move them here if applicable, or into custom CSS) #}
-    {% block head_styles %}{% endblock %} 
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" />
+
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"> {% block head_styles %}{% endblock %}
 </head>
-<body class="d-flex flex-column min-vh-100"> {# flex-column and min-vh-100 for sticky footer #}
 
-    {# Navbar #}
+<body class="d-flex flex-column min-vh-100">
+
+    <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
         <div class="container-fluid">
-            <a class="navbar-brand" href="{{ url_for('index') }}">
-                <i class="fas fa-fingerprint me-2"></i> AttendancePro
+            <a class="navbar-brand d-flex align-items-center" href="{{ url_for('index') }}">
+                {% if session.get('lecturer_logo') %}
+                    <img src="{{ url_for('static', filename=session['lecturer_logo'].replace('static/', '')) }}"
+                        alt="Logo" class="brand-logo" style="height: 32px; margin-right: 10px;">
+                {% else %}
+                    <img src="{{ url_for('static', filename='images/min_logo.png') }}" 
+                        alt="Locify Logo" class="brand-logo" style="height: 32px; margin-right: 10px;">
+                {% endif %}
+                <span class="brand-name" style="font-weight: 600;">Locify</span>
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
+
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto"> {# ms-auto pushes items to the right #}
+                <ul class="navbar-nav ms-auto">
+
+                    <!-- Home -->
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'index' %}active{% endif %}" aria-current="page" href="{{ url_for('index') }}"><i class="fas fa-home me-1"></i> Home</a>
+                        <a class="nav-link {% if request.endpoint == 'index' %}active{% endif %}" href="{{ url_for('index') }}">
+                            <i class="fas fa-home me-1"></i> Home
+                        </a>
                     </li>
-                    {% if session.get('logged_in') and session.get('user_role') == 'lecturer' %}
+
+                    {% if session.get('logged_in') %} {% if session.get('role') == 'org_admin' %}
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}"><i class="fas fa-tachometer-alt me-1"></i> Dashboard</a>
+                        <a class="nav-link {% if request.endpoint == 'org_dashboard' %}active{% endif %}" href="{{ url_for('org_dashboard') }}">
+                            <i class="fas fa-tachometer-alt me-1"></i> Org Dashboard
+                        </a>
                     </li>
+                    {% elif session.get('role') == 'school_lecturer' %}
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'lecturer_config_route' %}active{% endif %}" href="{{ url_for('lecturer_config_route') }}"><i class="fas fa-cog me-1"></i> Config</a>
+                        <a class="nav-link {% if request.endpoint == 'school_lecturer_dashboard' %}active{% endif %}" href="{{ url_for('school_lecturer_dashboard') }}">
+                            <i class="fas fa-tachometer-alt me-1"></i> Lecturer Dashboard
+                        </a>
                     </li>
+                    {% elif session.get('role') == 'solo_lecturer' %}
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'qr_generator_page' %}active{% endif %}" href="{{ url_for('qr_generator_page') }}"><i class="fas fa-qrcode me-1"></i> QR Gen</a>
+                        <a class="nav-link {% if request.endpoint == 'solo_lecturer_dashboard' %}active{% endif %}" href="{{ url_for('solo_lecturer_dashboard') }}">
+                            <i class="fas fa-tachometer-alt me-1"></i> Solo Dashboard
+                        </a>
                     </li>
+                    {% endif %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt me-1"></i> Logout</a>
+                        <a class="nav-link" href="{{ url_for('logout') }}">
+                            <i class="fas fa-sign-out-alt me-1"></i> Logout
+                        </a>
                     </li>
                     {% else %}
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'dashboard_login' %}active{% endif %}" href="{{ url_for('dashboard_login') }}"><i class="fas fa-user-shield me-1"></i> Lecturer Login</a>
+
+                    <!-- Register Dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user-plus me-1"></i> Register
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{{ url_for('register_org') }}">Organisation</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('register_lecturer') }}">Lecturer</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('register_solo') }}">Solo Lecturer</a></li>
+                        </ul>
                     </li>
                     {% endif %}
                 </ul>
@@ -59,42 +93,29 @@
         </div>
     </nav>
 
-    <main class="flex-grow-1 py-4"> {# flex-grow-1 pushes footer down, py-4 adds vertical padding #}
+    <!-- Main Content -->
+    <main class="flex-grow-1 py-4">
         <div class="container">
-            {# Flash Messages #}
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                            {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        </div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
-
-            {# Main content block for child templates #}
-            {% block content %}{% endblock %}
+            {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %} {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %} {% endif %} {% endwith %} {% block content %}{% endblock %}
         </div>
     </main>
 
-    {# Footer #}
-    <footer class="bg-secondary text-white py-3 mt-auto"> {# mt-auto for sticky footer #}
+    <!-- Footer -->
+    <footer class="bg-secondary text-white py-3 mt-auto">
         <div class="container text-center">
-            {# Use g.current_time which is set by the @app.before_request in app.py #}
-            <p>&copy; {{ g.current_time.year }} AttendancePro. All rights reserved.</p>
-            <p>Developed for Kwame Nkrumah University of Science and Technology.</p>
+            <p>&copy; {{ g.current_time.year }} Locify. All rights reserved.</p>
+            <p>Presence Made Simple.</p>
         </div>
     </footer>
 
-    {# Bootstrap Bundle with Popper (Minified) - for JS components like navbar toggler #}
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-    
-    {# Flask-Moment JavaScript - crucial for dynamic time display if used in templates directly #}
-    {{ moment.include_moment() }}
-    {# This includes moment.js and initializes it with your timezone settings if configured #}
-
-    {# Custom JavaScript (if any, will go here) #}
-    {% block scripts %}{% endblock %}
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    {{ moment.include_moment() }} {% block scripts %}{% endblock %}
 </body>
+
 </html>

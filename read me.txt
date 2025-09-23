@@ -1,0 +1,31 @@
+to delete current data in db 
+open cmd in folder
+initiate python
+type : 
+from app import app, db
+
+with app.app_context():
+    db.drop_all()
+    db.create_all()
+
+google app password
+qgyi vqpo msxj ngat
+
+
+---------------------------
+how to alter DB
+---------------------------
+\c attendance_app
+\dt
+then alter
+
+the base dashboard
+a place to receive messages and notifacations from the app. lets say a student misses class or something.
+
+-----------------------
+using powershell
+$env:FLASK_APP = "app.py"   # Only needed once per session
+flask shell
+
+
+the front end has a base dashboard which holds the left panel, currently the button to show and unshow the panel is not working in desktop view but mobile view

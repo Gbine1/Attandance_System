@@ -1,0 +1,47 @@
+{% extends "base.html" %} {% block title %}Login - Locify{% endblock %} {% block content %}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="card shadow-lg">
+                <div class="card-body text-center">
+                    <h2 class="mb-4 text-primary">
+                        <i class="fas fa-sign-in-alt me-2"></i> Login as {{ role_display }}
+                    </h2>
+
+                    <form method="POST">
+                        <div class="mb-3 text-start">
+                            <label for="email" class="form-label">Email address</label>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                        </div>
+
+                        <div class="mb-3 text-start">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 mb-3">
+                            <i class="fas fa-sign-in-alt me-1"></i> Login
+                        </button>
+
+                        <div class="text-center">
+                            <small>
+                                Don't have an account?
+                                {% if role == 'org' %}
+                                <a href="{{ url_for('register_org') }}">Register as HOD</a>
+                                {% elif role == 'school' %}
+                                <a href="{{ url_for('register_lecturer') }}">Register as Department Secretary</a>
+                                {% elif role == 'solo' %}
+                                <a href="{{ url_for('register_solo') }}">Register as Lecturer</a>
+                                {% endif %}
+                            </small>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

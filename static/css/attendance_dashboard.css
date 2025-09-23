@@ -1,0 +1,503 @@
+/* attendance_dashboard.css */
+
+/* Attendance Dashboard Specific Styles */
+.attendance-dashboard {
+  padding: 1.5rem;
+}
+
+/* Top row with title and buttons */
+.attendance-dashboard .top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.attendance-dashboard .page-title {
+  font-size: 1.875rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.attendance-dashboard .actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+/* Main grid layout */
+.attendance-dashboard .grid-main {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Card styling (similar to dept_dashboard) */
+.attendance-dashboard .card {
+  background: var(--card-bg);
+  border-radius: 12px;
+  padding: 1.2rem;
+  margin-bottom: 1.2rem;
+  box-shadow: var(--shadow);
+  transition: transform 0.2s ease;
+}
+
+.attendance-dashboard .card:hover {
+  transform: translateY(-4px);
+}
+
+.attendance-dashboard .section-header {
+  font-weight: 600;
+  margin-bottom: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--hover-bg);
+}
+
+.attendance-dashboard .section-header i {
+  color: var(--text-muted);
+}
+
+/* Live Session Panel */
+.attendance-dashboard .live-panel {
+  position: relative;
+}
+
+.attendance-dashboard .empty-state {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.attendance-dashboard .live-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.attendance-dashboard .live-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.attendance-dashboard .live-top h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.25rem;
+}
+
+.attendance-dashboard .meta {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.attendance-dashboard .meta-pill {
+  background-color: var(--hover-bg);
+  color: var(--text-muted);
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.attendance-dashboard .live-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.attendance-dashboard .timer {
+  font-family: monospace;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #4361ee;
+  background-color: var(--hover-bg);
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+}
+
+/* Stats */
+.attendance-dashboard .live-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+
+.attendance-dashboard .stat {
+  text-align: center;
+  padding: 1rem;
+  background-color: var(--hover-bg);
+  border-radius: 8px;
+}
+
+.attendance-dashboard .stat.small {
+  padding: 0.75rem;
+}
+
+.attendance-dashboard .stat-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.attendance-dashboard .stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.attendance-dashboard .stat.small .stat-value {
+  font-size: 1.25rem;
+}
+
+/* QR and share section */
+.attendance-dashboard .live-actions {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.attendance-dashboard .qr-block {
+  width: 110px;
+  height: 110px;
+  background: var(--card-bg);
+  border: 1px solid var(--hover-bg);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.attendance-dashboard .share-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.attendance-dashboard .share-input {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--hover-bg);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  background-color: var(--hover-bg);
+}
+
+.attendance-dashboard .share-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Charts container */
+.attendance-dashboard .charts-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.attendance-dashboard .chart-card {
+  height: 100%;
+}
+
+.attendance-dashboard .charts canvas {
+  max-height: 250px;
+}
+
+/* Quick actions */
+.attendance-dashboard .quick-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Calendar */
+.attendance-dashboard .calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.attendance-dashboard .month-label {
+  font-weight: 600;
+}
+
+.attendance-dashboard .calendar-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.attendance-dashboard .calendar-day {
+  padding: 0.6rem;
+  border-radius: 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.attendance-dashboard .calendar-day:hover {
+  background: var(--hover-bg);
+}
+
+.attendance-dashboard .calendar-day.today {
+  background: orange;
+  color: white;
+  font-weight: bold;
+}
+
+/* Reports */
+.attendance-dashboard .reports-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.attendance-dashboard .reports-actions label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.attendance-dashboard .reports-actions input {
+  padding: 0.375rem 0.5rem;
+  border: 1px solid var(--hover-bg);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  background-color: var(--hover-bg);
+}
+
+/* Tables */
+.attendance-dashboard .table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.attendance-dashboard .table th {
+  text-align: left;
+  padding: 0.75rem;
+  background-color: var(--hover-bg);
+  font-weight: 600;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--hover-bg);
+}
+
+.attendance-dashboard .table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--hover-bg);
+}
+
+.attendance-dashboard .table tr:last-child td {
+  border-bottom: none;
+}
+
+/* Modals */
+.attendance-dashboard .modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.attendance-dashboard .modal-panel {
+  background-color: var(--card-bg);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.attendance-dashboard .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--hover-bg);
+}
+
+.attendance-dashboard .modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.attendance-dashboard .btn-close {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
+.attendance-dashboard .btn-close:hover {
+  color: inherit;
+}
+
+.attendance-dashboard .modal-body {
+  padding: 1.5rem;
+}
+
+.attendance-dashboard .modal-body form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.attendance-dashboard .modal-body label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.attendance-dashboard .modal-body input,
+.attendance-dashboard .modal-body select {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--hover-bg);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  background-color: var(--hover-bg);
+}
+
+.attendance-dashboard .modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.attendance-dashboard .geo-section {
+  padding: 1rem;
+  background-color: var(--hover-bg);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Utility classes */
+.attendance-dashboard .hidden {
+  display: none !important;
+}
+
+/* Button styles */
+.attendance-dashboard .btn-primary,
+.attendance-dashboard .btn-secondary,
+.attendance-dashboard .btn-ghost,
+.attendance-dashboard .btn-danger {
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.attendance-dashboard .btn-primary {
+  background-color: #4361ee;
+  color: white;
+}
+
+.attendance-dashboard .btn-primary:hover {
+  background-color: #3a56d4;
+  transform: translateY(-2px);
+}
+
+.attendance-dashboard .btn-secondary {
+  background-color: var(--hover-bg);
+  color: var(--text-muted);
+}
+
+.attendance-dashboard .btn-secondary:hover {
+  background-color: var(--hover-bg);
+  transform: translateY(-2px);
+}
+
+.attendance-dashboard .btn-ghost {
+  background-color: transparent;
+  color: var(--text-muted);
+}
+
+.attendance-dashboard .btn-ghost:hover {
+  background-color: var(--hover-bg);
+  transform: translateY(-2px);
+}
+
+.attendance-dashboard .btn-danger {
+  background-color: #ef4444;
+  color: white;
+}
+
+.attendance-dashboard .btn-danger:hover {
+  background-color: #dc2626;
+  transform: translateY(-2px);
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .attendance-dashboard .grid-main {
+    grid-template-columns: 1fr;
+  }
+  
+  .attendance-dashboard .charts-container {
+    grid-template-columns: 1fr;
+  }
+  
+  .attendance-dashboard .live-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .attendance-dashboard .live-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .attendance-dashboard {
+    padding: 1rem;
+  }
+  
+  .attendance-dashboard .top-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .attendance-dashboard .live-top {
+    flex-direction: column;
+  }
+  
+  .attendance-dashboard .live-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .attendance-dashboard .modal-panel {
+    margin: 1rem;
+    width: calc(100% - 2rem);
+  }
+  
+  .attendance-dashboard .reports-actions {
+    flex-direction: column;
+  }
+}

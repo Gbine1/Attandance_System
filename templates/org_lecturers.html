@@ -1,0 +1,100 @@
+{% extends "base_dashboard.html" %} {% block title %}Lecturers{% endblock %} {% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/org_lecturer.css') }}"> {% endblock %} {% block content %}
+<div class="px-6 py-6 animate-fade-in">
+    <!-- Header & Buttons -->
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-neutral-900 dark:text-white">Lecturers</h1>
+        <div class="flex gap-2">
+            <button id="toggleAddLecturer" class="btn-gradient-green">
+                <i class="fas fa-plus-circle mr-2"></i> Add Lecturer
+            </button>
+            <button class="btn-gradient-purple">
+                <i class="fas fa-upload mr-2"></i> Upload Lecturers
+            </button>
+        </div>
+    </div>
+
+    <!-- Add Lecturer Form -->
+    <div id="addLecturerForm" class="bg-card p-6 rounded-xl shadow mb-8 hidden">
+        <h3 class="text-lg font-semibold mb-4 text-neutral-800 dark:text-white">Register New Lecturer</h3>
+        <form id="addLecturerFormEl" method="POST" action="{{ url_for('register_lecturer_inline') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input name="full_name" type="text" placeholder="Full Name" required class="input" />
+                <input name="email" type="email" placeholder="Email Address" required class="input" />
+                <input name="phone" type="text" placeholder="Phone Number (optional)" class="input" />
+                <input name="college" type="text" placeholder="College" required class="input" />
+                <input name="faculty" type="text" placeholder="Faculty" required class="input" />
+                <input name="department" type="text" placeholder="Department" required class="input" />
+            </div>
+            <div class="mt-4">
+                <button type="submit" class="btn-gradient-blue">
+            <i class="fas fa-user-plus mr-2"></i> Save Lecturer
+        </button>
+                <button type="button" id="cancelAddLecturer" class="btn-outline">Cancel</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Lecturer Table -->
+    <div class="bg-card p-6 rounded-xl shadow">
+        <!-- Top row with search on left, export on right -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+            <!-- Search -->
+            <input type="text" id="searchInput" placeholder="Search lecturers..." class="input rounded-lg border px-4 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 
+            dark:bg-gray-800 dark:border-gray-600 dark:text-white w-full sm:w-1/2" />
+
+            <!-- Export buttons -->
+            <div class="flex space-x-2">
+                <button class="btn-outline text-sm flex items-center gap-2" aria-label="Export CSV" title="Export CSV">
+                <i class="fas fa-file-csv"></i>
+                <span class="hidden sm:inline">CSV</span>
+            </button>
+                <button class="btn-outline text-sm flex items-center gap-2" aria-label="Export PDF" title="Export PDF">
+                <i class="fas fa-file-pdf"></i>
+                <span class="hidden sm:inline">PDF</span>
+            </button>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-sm text-left text-gray-900 dark:text-gray-300" id="lecturersTable">
+                <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-300">
+                    <tr>
+                        <th class="px-4 py-3">Full Name</th>
+                        <th class="px-4 py-3">Email</th>
+                        <th class="px-4 py-3">College</th>
+                        <th class="px-4 py-3">Faculty</th>
+                        <th class="px-4 py-3">Department</th>
+                        <th class="px-4 py-3 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="lecturersTableBody">
+                    {% for lecturer in lecturers %}
+                    <tr data-id="{{ lecturer.id }}" class="bg-gray-100 dark:bg-gray-800 border-b dark:border-gray-700 rounded-lg overflow-hidden">
+                        <td class="px-4 py-2 text-gray-900 dark:text-gray-300">{{ lecturer.full_name }}</td>
+                        <td class="px-4 py-2 text-gray-900 dark:text-gray-300">{{ lecturer.email }}</td>
+                        <td class="px-4 py-2 text-gray-900 dark:text-gray-300">{{ lecturer.college }}</td>
+                        <td class="px-4 py-2 text-gray-900 dark:text-gray-300">{{ lecturer.faculty }}</td>
+                        <td class="px-4 py-2 text-gray-900 dark:text-gray-300">{{ lecturer.department }}</td>
+                        <td class="px-4 py-2 text-right flex justify-end gap-2">
+                            <!-- Edit -->
+                            <button class="btn-outline text-xs flex items-center gap-1 edit-btn" title="Edit Lecturer">
+                            <i class="fas fa-edit"></i>
+                            <span class="hidden sm:inline">Edit</span>
+                        </button>
+                            <!-- Delete -->
+                            <button class="btn-outline text-xs text-red-500 delete-lecturer-btn" data-id="{{ lecturer.id }}" title="Delete Lecturer">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %} {% block scripts %}
+<script src="{{ url_for('static', filename='js/org_lecturer.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,51 @@
+.page-title {
+    font-weight: bold;
+    margin-bottom: 1rem;
+}
+
+.stat-card {
+    padding: 1rem;
+    border-radius: 12px;
+    text-align: center;
+    transition: transform 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+}
+
+.search-input {
+    max-width: 250px;
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    border: 2px solid grey;
+    /* visible in both themes */
+    background-color: var(--bg-card);
+    color: var(--text);
+}
+
+.hidden {
+    display: none;
+}
+
+form input {
+    border: 2px solid grey;
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    background-color: var(--bg-card);
+    color: var(--text);
+}
+
+.table th,
+.table td {
+    vertical-align: middle;
+}
+
+.btn-primary {
+    background: linear-gradient(90deg, #6f42c1, #8e63d8);
+    border: none;
+}
+
+.btn-primary:hover {
+    opacity: 0.9;
+}

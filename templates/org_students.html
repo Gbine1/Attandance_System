@@ -1,0 +1,175 @@
+{% extends "base_dashboard.html" %} {% block title %}Students{% endblock %} {% block styles %}
+<!-- keep lecturer CSS for visual parity, plus small student-specific tweaks -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/org_lecturer.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/org_students.css') }}">
+<meta name="csrf-token" content="{{ csrf_token() }}"> {% endblock %} {% block content %}
+<div class="px-6 py-6 animate-fade-in">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-neutral-900 dark:text-white">Students</h1>
+
+        <div class="flex items-center gap-3">
+            <!-- NOTE: search display here is only for layout; primary search is inside the card like lecturers -->
+            <span class="hidden sm:inline text-sm text-muted"> </span>
+
+            <!-- Buttons (match lecturers look: green + purple gradients) -->
+            <button id="toggleAddStudent" class="btn-gradient-green btn-base" title="Add Student" aria-expanded="false">
+        <i class="fas fa-plus-circle mr-2"></i><span class="hidden sm:inline">Add Student</span>
+      </button>
+
+            <button id="uploadStudentsBtn" class="btn-gradient-purple btn-base" title="Upload Students">
+        <i class="fas fa-upload mr-2"></i><span class="hidden sm:inline">Upload Students</span>
+      </button>
+        </div>
+    </div>
+
+    <!-- Top stats & chart -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+        <div class="bg-card p-4 rounded-xl shadow flex items-center gap-4">
+            <div>
+                <p class="text-sm text-muted">Total Students</p>
+                <p id="totalStudentsCount" class="text-2xl font-bold">0</p>
+            </div>
+            <div class="ml-auto w-28">
+                <canvas id="studentsMiniChart" height="60"></canvas>
+            </div>
+        </div>
+
+        <!-- placeholder cards you can expand later -->
+        <div class="bg-card p-4 rounded-xl shadow hidden lg:block">
+            <p class="text-sm text-muted">Active Students</p>
+            <p class="text-xl font-semibold">—</p>
+        </div>
+        <div class="bg-card p-4 rounded-xl shadow hidden lg:block">
+            <p class="text-sm text-muted">New This Month</p>
+            <p class="text-xl font-semibold">—</p>
+        </div>
+    </div>
+
+    <!-- Add Student Form (collapsible) -->
+    <div id="addStudentForm" class="bg-card p-6 rounded-xl shadow mb-8 hidden">
+        <h3 class="text-lg font-semibold mb-4 text-neutral-800 dark:text-white">Register New Student</h3>
+        <form id="addStudentFormEl" method="POST" enctype="multipart/form-data" action="/org/add_student">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input name="student_id" id="student_id" type="text" placeholder="Student ID" required class="input" />
+                <input name="index_number" id="index_number" type="text" placeholder="Index Number" required class="input" />
+                <input name="full_name" id="full_name" type="text" placeholder="Full Name" required class="input" />
+                <input name="email" id="email" type="email" placeholder="Email Address" required class="input" />
+                <input name="phone" id="phone" type="phone" placeholder="Phone Number" required class="input" />
+                <input name="level" id="level" type="level" placeholder="Level / Year" required class="input" />
+                <input name="college" id="college" type="text" placeholder="College" required class="input" />
+                <input name="faculty" id="faculty" type="text" placeholder="Faculty" required class="input" />
+                <input name="department" id="department" type="text" placeholder="Department" required class="input" />
+
+                <!-- profile upload with preview -->
+                <div class="flex flex-col">
+                    <label class="text-xs text-muted mb-2">Profile Picture</label>
+                    <div class="flex items-center gap-3">
+                        <input id="profilePicInput" name="profile_pic" type="file" accept="image/*" class="input-file" />
+                        <div id="profilePreview" class="w-16 h-16 rounded-full overflow-hidden bg-gray-800">
+                            <!-- preview inserted by JS -->
+                            <img id="profilePreviewImg" src="{{ url_for('static', filename='images/default_student.jpg') }}" alt="preview" class="w-full h-full object-cover hidden">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 flex gap-3">
+                <button type="submit" class="btn-gradient-blue">
+                    <i class="fas fa-user-plus mr-2"></i> Save Student
+                </button>
+                <button type="button" id="cancelAddStudent" class="btn-outline">Cancel</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Students table card -->
+    <div class="bg-card p-6 rounded-xl shadow">
+        <!-- top controls: search (left), filters (center), export (right) -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+            <!-- Left: search & filters -->
+            <div class="flex gap-2 items-center w-full sm:w-2/3">
+                <input type="text" id="searchInput" placeholder="Search students..." class="input rounded-lg border px-4 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full" />
+                <select id="filterCollege" class="input hidden md:block">
+          <option value="">All Colleges</option>
+        </select>
+                <select id="filterFaculty" class="input hidden md:block">
+          <option value="">All Faculties</option>
+        </select>
+                <select id="filterDepartment" class="input hidden md:block">
+          <option value="">All Departments</option>
+        </select>
+                <select id="sortSelect" class="input hidden md:block">
+          <option value="">Sort</option>
+          <option value="3">Name (A–Z)</option>
+          <option value="5">College (A–Z)</option>
+          <option value="6">Faculty (A–Z)</option>
+          <option value="7">Department (A–Z)</option>
+        </select>
+            </div>
+
+            <!-- Right: export buttons -->
+            <div class="flex items-center gap-2 export-area">
+                <button id="exportCsv" class="btn-outline text-sm flex items-center gap-2" title="Export CSV" aria-label="Export CSV">
+          <i class="fas fa-file-csv"></i><span class="hidden sm:inline">CSV</span>
+        </button>
+                <button id="exportPdf" class="btn-outline text-sm flex items-center gap-2" title="Export PDF" aria-label="Export PDF">
+          <i class="fas fa-file-pdf"></i><span class="hidden sm:inline">PDF</span>
+        </button>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-sm text-left text-gray-900 dark:text-gray-300" id="studentsTable">
+                <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-300">
+                    <tr>
+                        <th class="px-4 py-3">Profile</th>
+                        <th class="px-4 py-3">Student ID</th>
+                        <th class="px-4 py-3">Index Number</th>
+                        <th class="px-4 py-3">Full Name</th>
+                        <th class="px-4 py-3">Email</th>
+                        <th class="px-4 py-3">Phone</th>
+                        <th class="px-4 py-3">Level</th>
+                        <th class="px-4 py-3">College</th>
+                        <th class="px-4 py-3">Faculty</th>
+                        <th class="px-4 py-3">Department</th>
+                        <th class="px-4 py-3 text-right">Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody id="studentsTableBody">
+                    {% for student in students %}
+                    <tr data-id="{{ student.id }}" class="bg-gray-100 dark:bg-gray-800 border-b dark:border-gray-700 rounded-lg overflow-hidden">
+                        <td class="px-4 py-2">
+                            <img src="{{ student.profile_picture if student.profile_picture else url_for('static', filename='images/default_student.jpg') }}" alt="profile" class="w-10 h-10 rounded-full object-cover">
+                        </td>
+                        <td class="px-4 py-2">{{ student.student_id }}</td>
+                        <td class="px-4 py-2">{{ student.index_number }}</td>
+                        <td class="px-4 py-2">{{ student.full_name }}</td>
+                        <td class="px-4 py-2">{{ student.email }}</td>
+                        <td class="px-4 py-2">{{ student.phone }}</td>
+                        <td class="px-4 py-2">{{ student.level }}</td>
+                        <td class="px-4 py-2">{{ student.college }}</td>
+                        <td class="px-4 py-2">{{ student.faculty }}</td>
+                        <td class="px-4 py-2">{{ student.department }}</td>
+                        <td class="px-4 py-2 text-right flex justify-end gap-2">
+                            <button class="btn-outline text-xs flex items-center gap-1 edit-student-btn" data-id="{{ student.id }}" title="Edit Student">
+                <i class="fas fa-edit"></i><span class="hidden sm:inline">Edit</span>
+              </button>
+                            <button class="btn-outline text-xs text-red-500 delete-student-btn" data-id="{{ student.id }}" title="Delete Student">
+                <i class="fas fa-trash"></i>
+              </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %} {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='js/org_students.js') }}"></script>
+{% endblock %}

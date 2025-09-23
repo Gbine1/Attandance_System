@@ -1,0 +1,135 @@
+{% extends "base_dashboard.html" %} {% block title %}Organisation Dashboard{% endblock %} {% block content %}
+<div class="px-6 py-6 animate-fade-in">
+    <!-- Top Metrics Overview -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="bg-card p-4 rounded-xl shadow animate-slide-in-up">
+            <p class="text-muted text-sm">Total Students</p>
+            <h2 class="text-2xl font-bold text-neutral-900 dark:text-white">1,320</h2>
+        </div>
+        <div class="bg-card p-4 rounded-xl shadow animate-slide-in-up">
+            <p class="text-muted text-sm">Lecturers</p>
+            <h2 class="text-2xl font-bold text-neutral-900 dark:text-white">128</h2>
+        </div>
+        <div class="bg-card p-4 rounded-xl shadow animate-slide-in-up">
+            <p class="text-muted text-sm">Departments</p>
+            <h2 class="text-2xl font-bold text-neutral-900 dark:text-white">24</h2>
+        </div>
+        <div class="bg-card p-4 rounded-xl shadow animate-slide-in-up">
+            <p class="text-muted text-sm">Courses</p>
+            <h2 class="text-2xl font-bold text-neutral-900 dark:text-white">88</h2>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="flex flex-wrap gap-4 mb-10 btn-group">
+        <a href="{{ url_for('register_course') }}" class="btn-gradient-blue">
+            <i class="fas fa-book mr-2"></i> Add Course
+        </a>
+        <a href="{{ url_for('register_lecturer') }}" class="btn-gradient-green">
+            <i class="fas fa-user-plus mr-2"></i> Register Lecturer
+        </a>
+        <a href="#" class="btn-gradient-gray">
+            <i class="fas fa-university mr-2"></i> Add College
+        </a>
+        <a href="#" class="btn-gradient-gray">
+            <i class="fas fa-building mr-2"></i> Add Faculty
+        </a>
+        <a href="#" class="btn-gradient-gray">
+            <i class="fas fa-sitemap mr-2"></i> Add Department
+        </a>
+        <a href="{{ url_for('upload_students') }}" class="btn-gradient-purple">
+            <i class="fas fa-upload mr-2"></i> Upload Students
+        </a>
+    </div>
+
+
+    <!-- Charts Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+        <div class="bg-card p-6 rounded-xl shadow animate-fade-in">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-base font-semibold text-neutral-800 dark:text-white">University Attendance Trends</h3>
+                <button class="btn-outline">
+                <i class="fas fa-download mr-1"></i>Download CSV
+                </button>
+            </div>
+            <canvas id="schoolAttendanceChart" height="180 "></canvas>
+        </div>
+        <div class="bg-card p-6 rounded-xl shadow animate-fade-in ">
+            <div class="flex justify-between items-center mb-4 ">
+                <h3 class="text-base font-semibold text-neutral-800 dark:text-white ">College Attendance</h3>
+                <button class="btn-outline">
+                <i class="fas fa-download mr-1"></i>Download PDF
+                </button>
+            </div>
+            <canvas id="collegeAttendanceChart" height="180 "></canvas>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10 ">
+        <div class="bg-card p-6 rounded-xl shadow animate-fade-in ">
+            <div class="flex justify-between items-center mb-4 ">
+                <h3 class="text-base font-semibold text-neutral-800 dark:text-white">Faculty Attendance</h3>
+                <button class="btn-outline">
+                <i class="fas fa-download mr-1"></i>Download XLSX
+                </button>
+            </div>
+            <canvas id="facultyAttendanceChart" height="180 "></canvas>
+        </div>
+        <div class="bg-card p-6 rounded-xl shadow animate-fade-in ">
+            <div class="flex justify-between items-center mb-4 ">
+                <h3 class="text-base font-semibold text-neutral-800 dark:text-white">Department Attendance</h3>
+                <button class="btn-outline">
+                <i class="fas fa-download mr-1"></i>Export
+                </button>
+            </div>
+            <canvas id="departmentAttendanceChart" height="180 "></canvas>
+        </div>
+    </div>
+
+    <!-- Popular Courses -->
+    <div class="bg-card p-6 rounded-xl shadow animate-fade-in mb-10 ">
+        <div class="flex justify-between items-center mb-4 ">
+            <h3 class="text-base font-semibold text-neutral-800 dark:text-white">Most Popular Courses</h3>
+            <button class="btn-outline">
+                <i class="fas fa-download mr-1"></i>Export
+                </button>
+        </div>
+        <canvas id="coursePopularityChart" height="160 "></canvas>
+    </div>
+
+    <!-- Analytics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 ">
+        <div class="bg-card p-5 rounded-xl shadow animate-slide-in-up ">
+            <h4 class="text-base font-semibold text-neutral-800 dark:text-white">Top Performing Lecturers</h4>
+            <ul class="text-sm text-muted space-y-1 ">
+                <li>Dr. Mensah – 95%</li>
+                <li>Prof. Kwabena – 92%</li>
+                <li>Mrs. Adjei – 89%</li>
+            </ul>
+        </div>
+        <div class="bg-card p-5 rounded-xl shadow animate-slide-in-up ">
+            <h4 class="text-base font-semibold text-neutral-800 dark:text-white">Lowest Attendance Courses</h4>
+            <ul class="text-sm text-muted space-y-1 ">
+                <li>MATH402 – 32%</li>
+                <li>ENG301 – 45%</li>
+                <li>PHY101 – 48%</li>
+            </ul>
+        </div>
+        <div class="bg-card p-5 rounded-xl shadow animate-slide-in-up ">
+            <h4 class="text-base font-semibold text-neutral-800 dark:text-white">Download Reports</h4>
+            <p class="text-muted text-sm mb-2 ">Export attendance insights</p>
+            <div class="flex gap-2 ">
+                <button class="btn-outline">
+                <i class="fas fa-download mr-1"></i>CSV
+                </button>
+                <button class="btn-outline">
+                <i class="fas fa-download mr-1"></i>PDF
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js "></script>
+<script src="{{ url_for( 'static', filename='js/org_dashboard.js' ) }} "></script>
+{% endblock %}

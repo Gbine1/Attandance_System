@@ -1,102 +1,100 @@
-{% extends "base.html" %}
+{% extends "base.html" %} {% block title %}Lecturer Dashboard{% endblock %} {% block content %}
+<div class="container py-4">
 
-{% block title %}Lecturer Dashboard{% endblock %}
+    <!-- Logo Section -->
+    <div class="text-center mb-4">
+        {% if user and user.logo_filename %}
+        <img src="{{ url_for('static', filename='uploads/logos/' ~ user.logo_filename) }}" alt="School Logo" class="img-fluid mb-2" style="max-height: 120px;"> {% elif session.get('lecturer_logo') %}
+        <img src="{{ url_for('static', filename=session['lecturer_logo'].replace('static/', '')) }}" alt="School Logo" class="img-fluid mb-2" style="max-height: 120px;"> {% else %}
+        <p class="text-muted">
+            No logo uploaded yet.
+            <a href="{{ url_for('upload_logo') }}">Upload one</a>
+        </p>
+        {% endif %}
+    </div>
 
-{% block content %}
-<div class="container py-4"> {# Added py-4 for vertical padding #}
-    <h1 class="mb-4 text-center"><i class="fas fa-tachometer-alt me-2"></i> Lecturer Dashboard</h1> {# Added icon and spacing #}
-    
-    {# The navigation is now handled by base.html's navbar #}
-    {# Removed the old <nav> block here as it's redundant #}
+    <!-- Dashboard Title -->
+    <h1 class="mb-4 text-center">
+        <i class="fas fa-tachometer-alt me-2"></i> Lecturer Dashboard
+    </h1>
 
-    {# Flash messages are now handled by base.html #}
-    {# Removed the old {% with messages %} block here #}
-
-    <div class="dashboard-section mb-4"> {# Added mb-4 for margin #}
-        <h2 class="mb-3"><i class="fas fa-info-circle me-2"></i> Current Active Session Summary</h2> {# Added icon #}
-        {% if current_session.session_id %}
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <div class="card h-100 shadow-sm border-start border-primary border-3">
-                        <div class="card-body">
-                            <h5 class="card-title text-primary"><i class="fas fa-location-arrow me-2"></i> Session Details</h5>
-                            <p class="card-text mb-1"><strong>Session ID:</strong> {{ current_session.session_id }}</p>
-                            <p class="card-text mb-1"><strong>Location:</strong> {{ current_session.latitude }}, {{ current_session.longitude }}</p>
-                            <p class="card-text"><strong>Radius:</strong> {{ current_session.radius }}m</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6 mb-3">
-                    <div class="card h-100 shadow-sm border-start border-success border-3">
-                        <div class="card-body">
-                            <h5 class="card-title text-success"><i class="fas fa-chart-bar me-2"></i> Attendance Stats</h5>
-                            <p class="card-text mb-1"><strong>Total Scans:</strong> <span class="badge bg-primary">{{ total_scans_session }}</span></p>
-                            <p class="card-text mb-1"><strong>Present:</strong> <span class="badge bg-success">{{ present_count }}</span></p>
-                            <p class="card-text mb-1"><strong>Absent:</strong> <span class="badge bg-danger">{{ absent_count }}</span></p>
-                            <p class="card-text mb-1"><strong>Total Portal Accesses:</strong> <span class="badge bg-info">{{ total_portal_accesses }}</span></p>
-                            <p class="card-text"><strong>Unique Portal Students:</strong> <span class="badge bg-info">{{ unique_portal_students }}</span></p>
-                        </div>
-                    </div>
+    <!-- Quick Stats -->
+    <div class="row mb-4">
+        <div class="col-md-6 mb-3">
+            <div class="card shadow-sm border-start border-primary border-3 h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-list-alt fa-2x text-primary mb-2"></i>
+                    <h5 class="card-title">Total Sessions</h5>
+                    <p class="display-6 fw-bold">{{ total_sessions }}</p>
                 </div>
             </div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <div class="card shadow-sm border-start border-success border-3 h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-user-check fa-2x text-success mb-2"></i>
+                    <h5 class="card-title">Total Attendance Records</h5>
+                    <p class="display-6 fw-bold">{{ total_attendance }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Session Table -->
+    <div class="dashboard-section mb-4">
+        <h2 class="mb-3">
+            <i class="fas fa-list-alt me-2"></i> Recent Attendance Sessions
+        </h2>
+
+        {% if sessions %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle shadow-sm">
+                <thead class="table-primary">
+                    <tr>
+                        <th>Session ID</th>
+                        <th>Status</th>
+                        <th>Latitude</th>
+                        <th>Longitude</th>
+                        <th>Radius (m)</th>
+                        <th>Created</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in sessions %}
+                    <tr>
+                        <td>{{ s.session_id }}</td>
+                        <td>
+                            <span class="badge 
+                                    {% if s.status == 'active' %}bg-success
+                                    {% elif s.status == 'paused' %}bg-warning
+                                    {% else %}bg-danger{% endif %}">
+                                    {{ s.status|capitalize }}
+                                </span>
+                        </td>
+                        <td>{{ s.latitude or 'N/A' }}</td>
+                        <td>{{ s.longitude or 'N/A' }}</td>
+                        <td>{{ s.radius or 0 }}</td>
+                        <td>{{ moment(s.created_at).calendar() if s.created_at else 'N/A' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
         {% else %}
-            <p class="alert alert-info"><i class="fas fa-info-circle me-2"></i> No session is currently configured for this system. Please go to <a href="{{ url_for('lecturer_config_route') }}">Configure Session</a> to set one up.</p>
+        <p class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i> No sessions have been created yet.
+        </p>
         {% endif %}
     </div>
 
-    <div class="dashboard-section">
-        <h2 class="mb-3"><i class="fas fa-list-alt me-2"></i> All Created Attendances (Sessions)</h2> {# Added icon #}
-        {% if all_sessions %}
-            {# Your custom session-list styling from style.css will apply here #}
-            <ul class="session-list">
-                {% for session_item in all_sessions %}
-                    <li class="{{ session_item.status }}">
-                        <div class="session-details">
-                            <span class="session-id">{{ session_item.session_id }}</span>
-                            <span class="status">({{ session_item.status }})</span>
-                            <br>
-                            <small>Created: {{ moment(session_item.created_at).calendar() if session_item.created_at else 'N/A' }}</small>
-                            {% if session_item.closed_at %}
-                                <small> | Closed/Paused: {{ moment(session_item.closed_at).calendar() }}</small>
-                            {% endif %}
-                            <br>
-                            <small>Lat: {{ session_item.latitude }}, Lon: {{ session_item.longitude }}, Radius: {{ session_item.radius }}m</small>
-                        </div>
-                        <div class="session-actions">
-                            {% if session_item.status != 'active' %}
-                                <form method="POST" action="{{ url_for('update_session_status') }}">
-                                    <input type="hidden" name="session_id" value="{{ session_item.session_id }}">
-                                    <input type="hidden" name="status" value="active">
-                                    <button type="submit" class="btn btn-success btn-sm" title="Activate Session"><i class="fas fa-play"></i> Activate</button>
-                                </form>
-                            {% endif %}
-                            {% if session_item.status != 'paused' %}
-                                <form method="POST" action="{{ url_for('update_session_status') }}">
-                                    <input type="hidden" name="session_id" value="{{ session_item.session_id }}">
-                                    <input type="hidden" name="status" value="paused">
-                                    <button type="submit" class="btn btn-warning btn-sm" title="Pause Session"><i class="fas fa-pause"></i> Pause</button>
-                                </form>
-                            {% endif %}
-                            {% if session_item.status != 'closed' %}
-                                <form method="POST" action="{{ url_for('update_session_status') }}">
-                                    <input type="hidden" name="session_id" value="{{ session_item.session_id }}">
-                                    <input type="hidden" name="status" value="closed">
-                                    <button type="submit" class="btn btn-danger btn-sm" title="Close Session"><i class="fas fa-times"></i> Close</button>
-                                </form>
-                            {% endif %}
-                        </div>
-                    </li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p class="alert alert-info"><i class="fas fa-info-circle me-2"></i> No attendance sessions have been created yet. Configure a new session to begin tracking attendance.</p>
-        {% endif %}
-    </div>
-
+    <!-- Actions -->
     <div class="text-center mt-4">
-        <a href="{{ url_for('lecturer_config_route') }}" class="btn btn-primary btn-lg me-3"><i class="fas fa-cogs me-2"></i> Configure New Session</a>
-        <a href="{{ url_for('qr_generator_page') }}" class="btn btn-info btn-lg"><i class="fas fa-qrcode me-2"></i> Generate QR Code</a>
+        <a href="{{ url_for('upload_logo') }}" class="btn btn-secondary btn-lg me-3">
+            <i class="fas fa-image me-2"></i> Upload Logo
+        </a>
+        <a href="{{ url_for('logout') }}" class="btn btn-danger btn-lg">
+            <i class="fas fa-sign-out-alt me-2"></i> Logout
+        </a>
     </div>
-
 </div>
 {% endblock %}

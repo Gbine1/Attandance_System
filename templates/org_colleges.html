@@ -1,0 +1,89 @@
+{% extends "base_dashboard.html" %} {% block title %}Colleges - Organisation Dashboard{% endblock %} {% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/org_colleges.css') }}"> {% endblock %} {% block content %}
+<div class="container-fluid animate-fade-in">
+    <h1 class="page-title">Colleges</h1>
+
+    <!-- Overview Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-3 col-md-6">
+            <div class="card bg-card shadow-card stat-card">
+                <h6>Total Faculties</h6>
+                <h3 id="totalFaculties">0</h3>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card bg-card shadow-card stat-card">
+                <h6>Total Departments</h6>
+                <h3 id="totalDepartments">0</h3>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card bg-card shadow-card stat-card">
+                <h6>Total Lecturers</h6>
+                <h3 id="totalLecturers">0</h3>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card bg-card shadow-card stat-card">
+                <h6>Average Attendance</h6>
+                <h3 id="avgAttendance">0%</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="card bg-card shadow-card p-3 mb-4">
+        <h5 class="mb-3">Attendance Trends by Faculty</h5>
+        <canvas id="collegeAttendanceChart" height="100"></canvas>
+    </div>
+
+    <!-- Table and Actions -->
+    <div class="card bg-card shadow-card p-3">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <input type="text" id="searchCollege" class="form-control search-input" placeholder="Search College...">
+            <button class="btn btn-success" id="toggleAddForm">Add College</button>
+        </div>
+
+        <!-- Add College Form -->
+        <form id="addCollegeForm" class="hidden mb-3">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <input type="text" class="form-control" placeholder="College Name" name="name" required>
+                </div>
+                <div class="col-md-4">
+                    <input type="text" class="form-control" placeholder="Dean's Name" name="dean_name" required>
+                </div>
+                <div class="col-md-4">
+                    <input type="text" class="form-control" placeholder="Dean's Contact" name="dean_contact" required>
+                </div>
+            </div>
+            <div class="mt-3">
+                <button type="submit" class="btn btn-primary">Save College</button>
+            </div>
+        </form>
+
+        <!-- Colleges Table -->
+        <div class="table-responsive">
+            <table class="table table-hover table-striped">
+                <thead>
+                    <tr>
+                        <th>College Name</th>
+                        <th>Dean</th>
+                        <th>Faculties</th>
+                        <th>Departments</th>
+                        <th>Students</th>
+                        <th>Attendance %</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="collegesTableBody">
+                    <!-- Data loaded via JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %} {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='js/org_colleges.js') }}"></script>
+{% endblock %}

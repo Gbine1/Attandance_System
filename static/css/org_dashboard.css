@@ -1,0 +1,165 @@
+/* Card Styling */
+
+.bg-card {
+    background-color: var(--card-bg, #1e1e2f);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.bg-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+
+/* Metrics Text */
+
+.text-muted {
+    color: var(--text-muted, #a0aec0);
+}
+
+.text-white {
+    color: var(--text-color, #fff);
+}
+
+.stat-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+}
+
+
+/* Gradient Buttons */
+
+.btn-gradient-purple {
+    background: linear-gradient(to right, #8b5cf6, #7c3aed);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.btn-gradient-purple:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(139, 92, 246, 0.4);
+}
+
+
+/* 🔵 Blue Gradient */
+
+.btn-gradient-blue {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white;
+    padding: 0.6rem 1.2rem;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.btn-gradient-blue:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.5);
+}
+
+
+/* 🟢 Green Gradient */
+
+.btn-gradient-green {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    padding: 0.6rem 1.2rem;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.btn-gradient-green:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.5);
+}
+
+
+/* ⚫ Gray Gradient */
+
+.btn-gradient-gray {
+    background: linear-gradient(135deg, #6b7280, #4b5563);
+    color: white;
+    padding: 0.6rem 1.2rem;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 0 4px 10px rgba(75, 85, 99, 0.25);
+}
+
+.btn-gradient-gray:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(75, 85, 99, 0.4);
+}
+
+
+/* 🟣 Purple Gradient (Already present but included for consistency) */
+
+.btn-gradient-purple {
+    background: linear-gradient(to right, #8b5cf6, #7c3aed);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.btn-gradient-purple:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(139, 92, 246, 0.4);
+}
+
+
+/* 🧾 Outline Button */
+
+.btn-outline {
+    border: 1px solid var(--text-muted, #a0aec0);
+    background: transparent;
+    color: var(--text-muted, #a0aec0);
+    padding: 0.4rem 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+    transition: all 0.3s ease;
+}
+
+.btn-outline:hover {
+    background-color: var(--text-muted, #a0aec0);
+    color: var(--bg-color, #fff);
+    transform: translateY(-1px);
+}
+
+.chartjs-legend li {
+    cursor: pointer;
+    margin-right: 12px;
+    transition: all 0.3s ease;
+}
+
+.chartjs-legend li:hover {
+    opacity: 0.8;
+    transform: scale(1.05);
+}
+
+
+/* Button Spacing */
+
+.btn-group a {
+    margin-right: 0.5rem;
+}

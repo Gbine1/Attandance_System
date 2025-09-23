@@ -1,0 +1,141 @@
+/* dept_dashboard.css */
+
+/* === Dashboard Grid (Stats Row) === */
+.dashboard-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* === Stat Cards === */
+.stat-card {
+  background: var(--card-bg);
+  border-radius: 12px;
+  padding: 1.2rem;
+  text-align: center;
+  box-shadow: var(--shadow);
+  transition: transform 0.2s ease;
+}
+.stat-card:hover {
+  transform: translateY(-4px);
+}
+.stat-card h2 {
+  font-size: 1.8rem;
+  margin-bottom: 0.3rem;
+}
+.stat-card p {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+/* === Section Containers === */
+.section-container {
+  background: var(--card-bg);
+  border-radius: 12px;
+  padding: 1rem 1.2rem;
+  margin-bottom: 1.2rem;
+  box-shadow: var(--shadow);
+}
+.section-header {
+  font-weight: 600;
+  margin-bottom: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+}
+.chart-box {
+  height: 250px;
+}
+
+/* === Layouts (Grid for sections) === */
+.charts-row,
+.highlights-row,
+.bottom-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.2rem;
+}
+
+/* === Highlights === */
+.highlight-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+  padding: 1.2rem;
+}
+.highlight-card p {
+  margin-top: 0.3rem;
+  font-size: 0.9rem;
+}
+
+/* === Calendar === */
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 500;
+}
+.calendar-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+.calendar-day {
+  padding: 0.6rem;
+  border-radius: 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.calendar-day:hover {
+  background: var(--hover-bg);
+}
+.calendar-day.today {
+  background: orange;
+  color: white;
+  font-weight: bold;
+}
+
+/* === Recent Sessions === */
+.recent-sessions ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.recent-sessions li {
+  padding: 0.6rem 0;
+  font-size: 0.9rem;
+  border-bottom: 1px solid var(--hover-bg);
+}
+.recent-sessions li:last-child {
+  border-bottom: none;
+}
+
+/* === Reports Section === */
+.reports button {
+  margin-right: 0.5rem;
+  margin-top: 0.5rem;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* === Dark/Light Mode Vars === */
+:root {
+  --card-bg: #ffffff;
+  --shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  --text-muted: #555;
+  --hover-bg: #f2f2f2;
+}
+[data-theme="dark"] {
+  --card-bg: #1e1e2e;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  --text-muted: #aaa;
+  --hover-bg: #2a2a3a;
+}

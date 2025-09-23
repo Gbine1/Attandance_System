@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Locify - Attendance System</title>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+
+    <!-- Tailwind CSS -->
+    <link href="https://unpkg.com/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.min.css') }}">
+
+    <!-- Org Dashboard CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/org_dashboard.css') }}">
+
+    <!-- Lecturer Dashboard CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/lecturer_dashboard.css') }}">
+
+    <!-- Department Dashboard CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dept_dashboard.css') }}">
+
+    <!-- Attendance Dashboard CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/attendance_dashboard.css') }}">
+
+    <!-- 🧩 Per-page CSS block -->
+    {% block styles %}{% endblock %}
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.svg') }}">
+</head>
+
+
+<body class="dark-theme">
+    <div class="page-wrapper">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Locify Logo" class="sidebar-logo">
+            </div>
+
+            <nav class="sidebar-nav">
+                <ul>
+                    {% if session['role'] == 'org_admin' %}
+                    <li class="active">
+                        <a href="{{ url_for('org_dashboard') }}">
+                            <i class="fas fa-home"></i><span>Dashboard</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('org_lecturers') }}">
+                            <i class="fas fa-users-cog"></i><span>Lecturers</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('org_students') }}">
+                            <i class="fas fa-user-graduate"></i><span>Students</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('org_courses') }}">
+                            <i class="fas fa-book"></i><span>Courses</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('dept_dashboard') }}">
+                            <i class="fas fa-sitemap"></i><span>Departments</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#">
+                            <i class="fas fa-university"></i><span>Colleges</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#">
+                            <i class="fas fa-building"></i><span>Faculties</span>
+                        </a>
+                    </li>
+                    {% elif session['role'] == 'school_lecturer' %}
+                    <li class="active"><a href="{{ url_for('school_lecturer_dashboard') }}"><i class="fas fa-home"></i><span>Dashboard</span></a></li>
+                    <li>
+                        <a href="{{ url_for('org_lecturers') }}">
+                            <i class="fas fa-users-cog"></i><span>Lecturers</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('org_students') }}">
+                            <i class="fas fa-user-graduate"></i><span>Students</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('org_courses') }}">
+                            <i class="fas fa-book"></i><span>Courses</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#">
+                            <i class="fas fa-sitemap"></i><span>Departments</span>
+                        </a>
+                    </li>
+                    {% elif session['role'] == 'solo_lecturer' %}
+                    <li class="active"><a href="{{ url_for('solo_lecturer_dashboard') }}"><i class="fas fa-home"></i><span>Dashboard</span></a></li>
+                    <li>
+                        <a href="{{ url_for('dept_dashboard') }}">
+                            <i class="fas fa-sitemap"></i><span>Departments</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('org_courses') }}">
+                            <i class="fas fa-book"></i><span>Courses</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('org_students') }}">
+                            <i class="fas fa-user-graduate"></i><span>Students</span>
+                        </a>
+                    </li>
+                    <li><a href="{{ url_for('attendance_dashboard') }}"><i class="fas fa-map-marker-alt"></i><span>Attendance</span></a></li>
+                    <li><a href="#"><i class="fas fa-calendar-check"></i><span>Sessions</span></a></li>
+                    <li><a href="#"><i class="fas fa-chart-line"></i><span>Reports</span></a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Bar -->
+            <header class="top-bar">
+                <button class="menu-toggle" id="sidebarToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="Search...">
+                </div>
+
+                <div class="top-bar-right">
+                    <button class="theme-toggle" id="themeToggle">
+                        <i class="fas fa-moon"></i>
+                        <i class="fas fa-sun"></i>
+                    </button>
+
+                    <div class="notification-dropdown">
+                        <button class="notification-btn">
+                            <i class="fas fa-bell"></i>
+                            <span class="notification-badge">3</span>
+                        </button>
+                        <div class="notification-content">
+                            <div class="notification-header">
+                                <h4>Notifications</h4>
+                                <span class="mark-all-read">Mark all as read</span>
+                            </div>
+                            <div class="notification-list">
+                                <a href="#" class="notification-item unread">
+                                    <div class="notification-icon">
+                                        <i class="fas fa-user-check"></i>
+                                    </div>
+                                    <div class="notification-text">
+                                        <p><strong>New student</strong> registered for your class</p>
+                                        <small>2 minutes ago</small>
+                                    </div>
+                                </a>
+                                <a href="#" class="notification-item unread">
+                                    <div class="notification-icon">
+                                        <i class="fas fa-calendar-check"></i>
+                                    </div>
+                                    <div class="notification-text">
+                                        <p><strong>Session reminder</strong> for CS101 at 2:00 PM</p>
+                                        <small>1 hour ago</small>
+                                    </div>
+                                </a>
+                                <a href="#" class="notification-item">
+                                    <div class="notification-icon">
+                                        <i class="fas fa-file-upload"></i>
+                                    </div>
+                                    <div class="notification-text">
+                                        <p><strong>Attendance report</strong> has been generated</p>
+                                        <small>Yesterday</small>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="notification-footer">
+                                <a href="#">View all notifications</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="user-dropdown">
+                        <button class="user-profile">
+                            <img src="https://ui-avatars.com/api/?name={{ current_user.name if current_user.name else 'User' }}&background=FFA500&color=fff" alt="User" id="user-avatar">
+                            <span id="user-display-name">{{ current_user.name if current_user.name else 'User' }}</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                        <div class="dropdown-content">
+                            <a href="#"><i class="fas fa-user"></i> Profile</a>
+                            <a href="#"><i class="fas fa-cog"></i> Settings</a>
+                            <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Page Content -->
+            <div class="page-content" id="content">
+                <div class="content-header">
+                    <h1 id="user-greeting">Welcome, <span id="username">{{ current_user.name if current_user.name else 'User' }}</span>!</h1>
+                </div>
+
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <!-- Username Prompt Modal -->
+    {% if not current_user.name %}
+    <div class="modal" id="username-modal" style="display:block;">
+        <div class="modal-content">
+            <h3>Welcome to Locify!</h3>
+            <p>Please enter your name to personalize your experience:</p>
+            <form method="POST" action="{{ url_for('save_name') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="text" name="name" required>
+                <button type="submit">Continue</button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- JavaScript -->
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+
+</html>

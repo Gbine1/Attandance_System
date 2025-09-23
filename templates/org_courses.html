@@ -1,0 +1,123 @@
+{% extends "base_dashboard.html" %} {% block title %}Organisation - Courses{% endblock %} {% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/org_courses.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<meta name="csrf-token" content="{{ csrf_token() }}"> {% endblock %} {% block content %}
+<div class="page">
+
+    <div class="page-header">
+        <h1 class="text-2xl font-bold text-neutral-900 dark:text-white">Courses</h1>
+        <div class="header-actions">
+            <!-- Search Box -->
+            <div class="search-box mb-4">
+                <input type="text" id="searchBox" class="form-control theme-input" placeholder="Search courses...">
+            </div>
+            <div class="btn-group">
+                <button id="toggleAddCourse" class="btn btn-success"><i class="fa fa-plus"></i><span class="btn-text"> Add</span></button>
+                <button id="uploadCourses" class="btn btn-purple"><i class="fa fa-upload"></i><span class="btn-text"> Upload</span></button>
+                <button class="btn btn-primary export-btn" data-format="excel" title="Export Excel"><i class="fa fa-file-excel"></i></button>
+                <button class="btn btn-primary export-btn" data-format="csv" title="Export CSV"><i class="fa fa-file-csv"></i></button>
+                <button class="btn btn-primary export-btn" data-format="pdf" title="Export PDF"><i class="fa fa-file-pdf"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add / Edit form -->
+    <div id="addCourseForm" class="bg-card p-6 rounded-xl shadow form-card hidden">
+        <form id="courseForm" autocomplete="off">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="id" value="">
+            <div class="grid-form">
+                <div class="form-group">
+                    <label>Course Name</label>
+                    <input name="course_name" id="course_name" type="text" required>
+                </div>
+                <div class="form-group">
+                    <label>Course Code</label>
+                    <input name="course_code" id="course_code" type="text" required>
+                </div>
+                <div class="form-group">
+                    <label>Level</label>
+                    <input name="level" id="level" type="text" required>
+                </div>
+                <div class="form-group">
+                    <label>Department</label>
+                    <input name="department" id="department" type="text" required>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button id="saveCourseBtn" type="submit" class="btn btn-gradient">Save Course</button>
+                <button id="cancelCourseBtn" type="button" class="btn btn-outline">Cancel</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+        <div class="bg-card p-6 rounded-xl shadow stat-card">
+            <p class="muted">Total Courses</p>
+            <h2 id="totalCourses">0</h2>
+        </div>
+        <div class="bg-card p-6 rounded-xl shadow stat-card">
+            <p class="muted">Most Attended</p>
+            <h2 id="mostAttended">N/A</h2>
+        </div>
+        <div class="bg-card p-6 rounded-xl shadow stat-card">
+            <p class="muted">Least Attended</p>
+            <h2 id="leastAttended">N/A</h2>
+        </div>
+        <div class="bg-card p-6 rounded-xl shadow stat-card">
+            <p class="muted">Avg Attendance</p>
+            <h2 id="avgAttendance">0%</h2>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="charts-grid">
+        <div class="bg-card p-6 rounded-xl shadow chart-card">
+            <h3>Course Attendance Trend</h3>
+            <canvas id="courseAttendanceTrend" height="120"></canvas>
+        </div>
+        <div class="bg-card p-6 rounded-xl shadow chart-card">
+            <h3>Course Attendance Comparison</h3>
+            <canvas id="courseAttendanceComparison" height="120"></canvas>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="bg-card p-6 rounded-xl shadow table-card">
+        <div class="table-responsive">
+            <table id="coursesTable" class="styled-table">
+                <thead>
+                    <tr>
+                        <th>Course Name</th>
+                        <th>Code</th>
+                        <th>Level</th>
+                        <th>Department</th>
+                        <th>Attendance %</th>
+                        <th class="actions-col">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in courses %}
+                    <tr data-id="{{ c.id }}">
+                        <td class="name">{{ c.course_name }}</td>
+                        <td class="code">{{ c.course_code }}</td>
+                        <td class="level">{{ c.level }}</td>
+                        <td class="dept">{{ c.department }}</td>
+                        <td class="attendance">{{ (c.attendance if c.attendance is defined else '—') }}</td>
+                        <td class="actions-col">
+                            <button class="action-btn edit" data-id="{{ c.id }}" title="Edit"><i class="fa fa-edit"></i></button>
+                            <button class="action-btn delete" data-id="{{ c.id }}" title="Delete"><i class="fa fa-trash"></i></button>
+                        </td>
+                    </tr>
+                    {% else %} {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %} {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='js/org_courses.js') }}"></script>
+{% endblock %}

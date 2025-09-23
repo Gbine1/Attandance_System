@@ -1,0 +1,270 @@
+/* org_lecturer.css
+   Table row theming + rounded rows + theme-aware colors
+   Drop this into static/css/org_lecturer.css
+*/
+
+
+/* -------------------------
+   Theme variables (light)
+   ------------------------- */
+
+:root {
+    --card-bg: #ffffff;
+    --page-bg: #f8fafc;
+    --text-color: #111827;
+    --muted: #6b7280;
+    --input-bg: #ffffff;
+    --input-border: #e6e9ee;
+    --card-shadow: 0 6px 18px rgba(2, 6, 23, 0.06);
+    --row-bg: rgba(255, 255, 255, 0.98);
+    /* fallback for light */
+    --row-sep: rgba(0, 0, 0, 0.04);
+    --radius: 12px;
+}
+
+
+/* Dark overrides (body has .dark-theme) */
+
+body.dark-theme,
+body[data-bs-theme="dark"] {
+    --card-bg: #1f1f1f;
+    --page-bg: #0b0d10;
+    --text-color: #e6eef8;
+    --muted: #9ca3af;
+    --input-bg: #252525;
+    --input-border: #1f2937;
+    --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+    /* CHANGE THIS: darker row background for dark mode */
+    --row-bg: #222222;
+    /* close to table bg, but slightly lighter for contrast */
+    --row-sep: rgba(255, 255, 255, 0.02);
+    --radius: 2px;
+}
+
+
+/* Softer row edges and separators */
+
+table tbody tr {
+    background: var(--row-bg);
+    border-bottom: 1px solid var(--row-sep);
+}
+
+table tbody tr td {
+    border: none;
+    /* remove hard borders */
+    padding: 0.75rem 1rem;
+}
+
+
+/* Rounded corners on first and last cells of each row */
+
+table tbody tr td:first-child {
+    border-top-left-radius: var(--radius);
+    border-bottom-left-radius: var(--radius);
+}
+
+table tbody tr td:last-child {
+    border-top-right-radius: var(--radius);
+    border-bottom-right-radius: var(--radius);
+}
+
+
+/* Hover highlight for better UX */
+
+table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.03);
+    /* light fade on hover */
+}
+
+
+/* Card container */
+
+.bg-card {
+    background: var(--card-bg);
+    color: var(--text-color);
+    border-radius: calc(var(--radius) + 1px);
+    padding: 1.25rem;
+    box-shadow: var(--card-shadow);
+    transition: background .15s ease, color .15s ease;
+}
+
+
+/* Inputs */
+
+.input {
+    width: 100%;
+    padding: .6rem .9rem;
+    border-radius: .75rem;
+    border: 1px solid var(--input-border);
+    background: var(--input-bg);
+    color: var(--text-color);
+}
+
+
+/* Table: make header sticky & readable */
+
+.overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+}
+
+table {
+    width: 100%;
+    border-collapse: separate;
+    /* allow rounded rows via cells */
+    border-spacing: 0 12px;
+    /* vertical gap between rows */
+}
+
+
+/* Header cells */
+
+table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 4;
+    background: var(--card-bg);
+    color: var(--muted);
+    font-weight: 700;
+    font-size: .78rem;
+    text-transform: uppercase;
+    letter-spacing: .02em;
+    border-bottom: 1px solid var(--input-border);
+    padding: .7rem 1rem;
+}
+
+
+/* ===== Row styling =====
+   We style the TDs so rows appear as single rounded "chips".
+   This will override accidental "bg-white" utility classes in markup.
+*/
+
+
+/* Make each cell use the unified row background */
+
+table tbody tr td {
+    background: var(--row-bg);
+    color: var(--text-color) !important;
+    padding: .9rem 1rem;
+    vertical-align: middle;
+    border: none;
+    /* ensure contiguous look */
+    -webkit-font-smoothing: antialiased;
+}
+
+
+/* If there are .bg-white or light utility classes on tr/td, override them */
+
+table tbody tr.bg-white,
+table tbody tr td.bg-white,
+table tbody tr td[class*="bg-"] {
+    background: var(--row-bg) !important;
+    color: var(--text-color) !important;
+}
+
+
+/* Rounded ends for the "row" effect - first and last cell */
+
+table tbody tr td:first-child {
+    border-top-left-radius: var(--radius);
+    border-bottom-left-radius: var(--radius);
+}
+
+table tbody tr td:last-child {
+    border-top-right-radius: var(--radius);
+    border-bottom-right-radius: var(--radius);
+}
+
+
+/* Subtle hover lift for the whole row (cells all brighten) */
+
+table tbody tr td:hover {
+    /* keep subtle: highlight cells only */
+    filter: brightness(1.02);
+}
+
+table tbody tr:hover td {
+    transform: translateY(-2px);
+    transition: transform .18s ease;
+}
+
+
+/* Divider between rows is controlled by border-spacing. Keep no visible border. */
+
+table tbody tr+tr td {
+    /* nothing needed; spacing already creates gap */
+}
+
+
+/* Make action buttons consistent color in dark mode */
+
+.btn-outline {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .45rem .75rem;
+    border-radius: .6rem;
+    border: 1px solid var(--input-border);
+    background: transparent;
+    color: var(--muted);
+    font-weight: 600;
+}
+
+
+/* When export buttons are collapsed on mobile we still keep icon visible */
+
+@media (max-width: 640px) {
+    /* icon-only for primary action buttons */
+    .btn-base,
+    .btn-gradient-green,
+    .btn-gradient-purple {
+        gap: 0;
+        padding: .45rem;
+        min-width: 44px;
+        font-size: 0;
+    }
+    .btn-base i,
+    .btn-gradient-green i,
+    .btn-gradient-purple i {
+        font-size: 1.05rem;
+    }
+    .btn-outline {
+        padding: .4rem;
+        font-size: 0;
+        min-width: 40px;
+    }
+    .btn-outline i {
+        font-size: 1rem;
+    }
+    /* ensure header & export area align */
+    .export-area {
+        justify-content: flex-end;
+    }
+    .input {
+        font-size: .95rem;
+    }
+}
+
+
+/* Small tweaks: ensure newly appended elements inherit the theme quickly */
+
+table tbody tr td,
+table thead th {
+    transition: background .14s linear, color .14s linear;
+}
+
+
+/* Make delete button icon visible in dark mode */
+
+.delete-lecturer-btn i {
+    color: inherit;
+}
+
+
+/* Accessibility focus */
+
+table tbody tr td:focus-within,
+.btn-outline:focus,
+.btn-base:focus {
+    outline: 3px solid rgba(99, 102, 241, 0.09);
+    outline-offset: 2px;
+}

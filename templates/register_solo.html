@@ -1,0 +1,35 @@
+{% extends "base.html" %} {% block title %}Register Solo Lecturer{% endblock %} {% block content %}
+
+<div class="container py-5">
+    <h2 class="text-center mb-4 text-warning fw-bold">
+        <i class="fas fa-user-tie me-2"></i> Register as a Lecturer
+    </h2>
+
+    <form method="POST" class="shadow p-4 bg-white rounded mx-auto" style="max-width: 600px;">
+
+        <!-- ✅ CSRF token (must come first inside the form) -->
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <!-- Email -->
+        <div class="mb-3">
+            <label for="email" class="form-label fw-bold">Email</label>
+            <input type="email" class="form-control" id="email" name="email" required />
+        </div>
+
+        <!-- Password -->
+        <div class="mb-3">
+            <label for="password" class="form-label fw-bold">Password</label>
+            <input type="password" class="form-control" id="password" name="password" required />
+        </div>
+
+        <button type="submit" class="btn btn-warning w-100 py-2 fw-bold">
+            <i class="fas fa-user-plus me-2"></i> Register
+        </button>
+
+        <div class="text-center mt-3">
+            Already have an account? <a href="{{ url_for('login') }}">Login</a>
+        </div>
+    </form>
+</div>
+
+{% endblock %}

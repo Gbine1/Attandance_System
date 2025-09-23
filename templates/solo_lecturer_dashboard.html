@@ -1,0 +1,82 @@
+{% extends "base_dashboard.html" %}
+
+{% block content %}
+<div class="lecturer-dashboard">
+
+    <!-- Top Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="card bg-card animate-fade-in shadow-md rounded-2xl p-4 text-center">
+            <h3 class="text-lg font-semibold">Total Courses</h3>
+            <p class="text-3xl font-bold mt-2">12</p>
+        </div>
+        <div class="card bg-card animate-fade-in shadow-md rounded-2xl p-4 text-center">
+            <h3 class="text-lg font-semibold">Total Students</h3>
+            <p class="text-3xl font-bold mt-2">340</p>
+        </div>
+        <div class="card bg-card animate-fade-in shadow-md rounded-2xl p-4 text-center">
+            <h3 class="text-lg font-semibold">Total Departments</h3>
+            <p class="text-3xl font-bold mt-2">5</p>
+        </div>
+        <div class="card bg-card animate-fade-in shadow-md rounded-2xl p-4 text-center">
+            <h3 class="text-lg font-semibold">Sessions Conducted</h3>
+            <p class="text-3xl font-bold mt-2">28</p>
+        </div>
+    </div>
+
+    <!-- Graphs and Containers -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <!-- Overall Attendance % -->
+        <div class="card bg-card shadow-md rounded-2xl p-4">
+            <h3 class="text-lg font-semibold mb-2">Overall Attendance %</h3>
+            <canvas id="overallAttendanceChart" height="260"></canvas>
+        </div>
+
+        <!-- Active Session -->
+        <div class="card bg-card shadow-md rounded-2xl p-4">
+            <h3 class="text-lg font-semibold mb-2">Active Session</h3>
+            <div class="session-card">
+                <div class="session-item"><i class="fas fa-building"></i> <strong>Department:</strong> Telecom Eng</div>
+                <div class="session-item"><i class="fas fa-book"></i> <strong>Course:</strong> MATHS101</div>
+                <div class="session-item"><i class="fas fa-calendar-alt"></i> <strong>Date:</strong> 12/02/2025</div>
+                <div class="session-item"><i class="fas fa-qrcode"></i> <strong>Total Scans:</strong> 120</div>
+                <div class="session-item"><i class="fas fa-user-check"></i> <strong>Present:</strong> 100</div>
+                <div class="session-item"><i class="fas fa-user-times"></i> <strong>Absent:</strong> 20</div>
+            </div>
+        </div>
+
+        <!-- Last Session -->
+        <div class="card bg-card shadow-md rounded-2xl p-4">
+            <h3 class="text-lg font-semibold mb-2">Last Session</h3>
+            <div class="session-card">
+                <div class="session-item"><i class="fas fa-building"></i> <strong>Department:</strong> Telecom Eng</div>
+                <div class="session-item"><i class="fas fa-book"></i> <strong>Course:</strong> MATHS101</div>
+                <div class="session-item"><i class="fas fa-calendar-alt"></i> <strong>Date:</strong> 10/02/2025</div>
+                <div class="session-item"><i class="fas fa-qrcode"></i> <strong>Total Scans:</strong> 115</div>
+                <div class="session-item"><i class="fas fa-user-check"></i> <strong>Present:</strong> 95</div>
+                <div class="session-item"><i class="fas fa-user-times"></i> <strong>Absent:</strong> 20</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Calendar + Department Stats -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Compact Calendar -->
+        <div class="card bg-card shadow-md rounded-2xl p-4">
+            <h3 class="text-lg font-semibold mb-2">Calendar</h3>
+            <div id="calendar" class="calendar"></div>
+        </div>
+
+        <!-- Department Attendance Stats -->
+        <div class="card bg-card shadow-md rounded-2xl p-4">
+            <h3 class="text-lg font-semibold mb-2">Department Attendance Stats</h3>
+            <canvas id="departmentAttendanceChart" height="260"></canvas>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='js/lecturer_dashboard.js') }}"></script>
+{% endblock %}

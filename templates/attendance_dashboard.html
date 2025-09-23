@@ -1,0 +1,262 @@
+{% extends "base_dashboard.html" %}
+{% block title %}Attendance Dashboard{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/attendance_dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="attendance-dashboard">
+
+  <!-- Header / Actions -->
+  <div class="top-row">
+    <h2 class="page-title">Attendance</h2>
+    <div class="actions">
+      <button id="btnCreateSession" class="btn-primary">+ Create Session</button>
+      <button id="btnExportAll" class="btn-secondary">Export Recent CSV</button>
+    </div>
+  </div>
+
+  <!-- Main Grid -->
+  <div class="grid-main">
+
+    <!-- Left column -->
+    <div class="col-left">
+
+      <!-- Live Session Panel -->
+      <div class="card section-card">
+        <div class="section-header">
+          <i class="fas fa-bullhorn"></i> Live / Active Session
+        </div>
+        <div id="livePanel" class="live-panel">
+          <div class="empty-state">No active session. Start one or create a new session.</div>
+
+          <!-- when active -->
+          <div id="liveContent" class="live-content hidden">
+            <div class="live-top">
+              <div>
+                <h3 id="liveTitle"></h3>
+                <div class="meta">
+                  <span id="liveCourse" class="meta-pill"></span>
+                  <span id="liveClass" class="meta-pill"></span>
+                  <span id="liveMode" class="meta-pill"></span>
+                </div>
+              </div>
+              <div class="live-controls">
+                <div class="timer" id="liveTimer">00:00:00</div>
+                <button id="btnPause" class="btn-ghost">Pause</button>
+                <button id="btnEnd" class="btn-danger">End</button>
+              </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="live-stats">
+              <div class="stat small"><div class="stat-label">Total</div><div id="liveTotal" class="stat-value">0</div></div>
+              <div class="stat small"><div class="stat-label">Present</div><div id="livePresent" class="stat-value">0</div></div>
+              <div class="stat small"><div class="stat-label">Absent</div><div id="liveAbsent" class="stat-value">0</div></div>
+              <div class="stat small"><div class="stat-label">Manual Adds</div><div id="liveManual" class="stat-value">0</div></div>
+            </div>
+
+            <!-- QR + Share -->
+            <div class="live-actions">
+              <div class="qr-block" id="qrBlock"></div>
+              <div class="share-block">
+                <input id="shareUrl" readonly type="text" class="share-input" />
+                <div class="share-buttons">
+                  <button id="btnCopyUrl" class="btn-ghost">Copy URL</button>
+                  <button id="btnManualAdd" class="btn-primary">Add Student (Manual)</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Student Table -->
+            <div class="live-table">
+              <h4>Student Attendance Details</h4>
+              <table class="table" id="liveStudentTable">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Index No</th>
+                    <th>Status</th>
+                    <th>Longitude</th>
+                    <th>Latitude</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- JS will populate -->
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts -->
+        <div class="charts-container">
+            <div class="card section-card chart-card">
+                <div class="section-header"><i class="fas fa-chart-line"></i> Attendance Trend</div>
+                <canvas id="trendChart"></canvas>
+            </div>
+
+            <div class="card section-card chart-card">
+                <div class="section-header"><i class="fas fa-chart-pie"></i> Today Snapshot</div>
+                <canvas id="snapshotChart"></canvas>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Right column -->
+    <div class="col-right">
+
+      <!-- Quick Actions -->
+      <div class="card section-card">
+        <div class="section-header"><i class="fas fa-tasks"></i> Quick Actions</div>
+        <div class="quick-actions">
+          <button id="btnQuickStart" class="btn-primary">Start Quick Session</button>
+          <button id="btnScanQr" class="btn-ghost">Simulate QR Scan</button>
+        </div>
+      </div>
+
+      <!-- Calendar -->
+      <div class="card section-card">
+        <div class="section-header"><i class="fas fa-calendar-alt"></i> Calendar</div>
+        <div class="calendar-header">
+          <button id="prev-month">&lt;</button>
+          <div id="month-label" class="month-label"></div>
+          <button id="next-month">&gt;</button>
+        </div>
+        <div class="calendar-days"></div>
+      </div>
+
+      <!-- bottom row (reports) -->
+  <!-- In the right column, add this after the calendar -->
+    <div class="card section-card reports">
+        <div class="section-header"><i class="fas fa-file-download"></i> Reports</div>
+        <div class="reports-actions">
+            <label>From <input type="date" id="reportFrom" /></label>
+            <label>To <input type="date" id="reportTo" /></label>
+            <button id="btnExportRange" class="btn-primary">Export Range</button>
+        </div>
+    </div>
+    </div>
+  </div>
+
+  <!-- Recent Sessions -->
+      <div class="card section-card">
+        <div class="section-header"><i class="fas fa-history"></i> Recent Sessions</div>
+        <div class="recent-list">
+          <table class="table" id="recentTable">
+            <thead>
+              <tr><th>Course</th><th>Date</th><th>Present</th><th>Absent</th><th>Actions</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Student Attendance Details -->
+      <div class="card section-card">
+        <div class="section-header"><i class="fas fa-history"></i> Student Attendance Details</div>
+        <div class="recent-list">
+          <table class="table" id="recentTable">
+            <thead>
+              <tr><th>Date</th><th>Course Name</th><th>Student name</th><th>Student Id</th><th>Status</th><th>Longitude</th><th>Latitude</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+</div>
+
+<!-- Modal: Create Session -->
+<div id="createModal" class="modal hidden">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <h3>Create Attendance Session</h3>
+      <button class="btn-close" id="closeCreate">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="createForm">
+        <label>Course
+          <select id="courseSelect" required>
+            <option value="MATHS101">MATHS101 - Mathematics</option>
+            <option value="CS101">CS101 - Intro to Programming</option>
+            <option value="PHY102">PHY102 - Physics</option>
+          </select>
+        </label>
+
+        <label>Class / Department
+          <select id="classSelect" required>
+            <option value="Telecom">Telecom Eng</option>
+            <option value="Computer">Computer Eng</option>
+          </select>
+        </label>
+
+        <label>Date & Time
+          <input id="sessionDate" type="datetime-local" required />
+        </label>
+
+        <label>Duration (minutes)
+          <input id="sessionDuration" type="number" min="5" value="30" required />
+        </label>
+
+        <label>Mode
+          <select id="sessionMode">
+            <option value="in-person">In-Person</option>
+            <option value="online">Online</option>
+          </select>
+        </label>
+
+        <!-- NEW: Geolocation -->
+        <div class="geo-section">
+          <label>Longitude
+            <input id="longitude" type="text" placeholder="Auto-detect or enter manually" required />
+          </label>
+          <label>Latitude
+            <input id="latitude" type="text" placeholder="Auto-detect or enter manually" required />
+          </label>
+          <button type="button" class="btn-ghost" id="btnGetLocation">📍 Use Current Location</button>
+        </div>
+
+        <div class="modal-actions">
+          <button type="submit" class="btn-primary">Create & Start</button>
+          <button type="button" class="btn-ghost" id="cancelCreate">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Manual Add -->
+<div id="manualModal" class="modal hidden">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <h3>Manually Add Student</h3>
+      <button class="btn-close" id="closeManual">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="manualForm">
+        <label>Student ID or Reg No
+          <input id="manualId" type="text" required />
+        </label>
+        <label>Student Name
+          <input id="manualName" type="text" required />
+        </label>
+        <div class="modal-actions">
+          <button type="submit" class="btn-primary">Add to Session</button>
+          <button type="button" class="btn-ghost" id="cancelManual">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='js/attendance_dashboard.js') }}"></script>
+{% endblock %}

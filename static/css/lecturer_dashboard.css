@@ -1,0 +1,111 @@
+/* Lecturer Dashboard Styles */
+.lecturer-dashboard {
+  padding: 1rem;
+}
+
+/* Stat Cards */
+.card {
+  transition: all 0.3s ease-in-out;
+}
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Calendar */
+.calendar {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.calendar-header button {
+  background: var(--btn-gradient, linear-gradient(135deg, #667eea, #764ba2));
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  color: white;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease-in-out;
+}
+.calendar-header button:hover {
+  opacity: 0.85;
+}
+
+.calendar-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.2rem;
+}
+
+.calendar-day,
+.calendar-weekday {
+  padding: 0.6rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.calendar-weekday {
+  font-weight: bold;
+  opacity: 0.7;
+}
+
+/* Light/Dark Theme Styles */
+body.light .calendar-day {
+  background: #f9f9f9;
+  color: #333;
+}
+body.dark .calendar-day {
+  background: #1f1f1f;
+  color: #f0f0f0;
+}
+
+/* Hover Effect */
+.calendar-day:hover {
+  cursor: pointer;
+  background: rgba(255, 165, 0, 0.2);
+}
+
+/* Highlight Today */
+.calendar-day.today {
+  background: orange !important;
+  color: white !important;
+  font-weight: bold;
+  box-shadow: 0 0 10px rgba(255, 165, 0, 0.6);
+}
+
+/* Fix chart card height */
+#overallAttendanceChart,
+#departmentAttendanceChart {
+  height: 300px !important;
+  max-height: 300px;
+}
+
+/* Session Cards Styling */
+.session-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.session-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.session-item i {
+  color: #667eea; /* purple tone */
+  font-size: 1rem;
+}
+
